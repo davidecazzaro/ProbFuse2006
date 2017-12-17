@@ -6,6 +6,7 @@
 import os
 import sys
 import shutil
+import statistics
 
 
 # check that the input folder exists
@@ -133,9 +134,9 @@ def clean_tmp_files(path_to_tmp_folder):
 	os.makedirs(os.path.dirname(path_to_tmp_folder), exist_ok=True)
 
 
-# read the file in the tmp folder
+# read the file in the tmp folder and return a dict with doc_id as keys and a list of scores
 def parse_aggregated_topic(path_to_file):
-	bucket = [] # list of tuples
+	bucket = {} # dict
 	with open(path_to_file) as fp:
 		for line in fp:
 			line = line.strip()
@@ -149,5 +150,43 @@ def parse_aggregated_topic(path_to_file):
 			if len(tokens) != 2:
 				raise Exception("Found a line in '"+path_to_file+"' with "+str(len(tokens))+" tokens, 2 expected: "+line )
 
-			bucket.append( extracted_tuple )
+			if not doc_id in bucket:
+				bucket[doc_id] = []
+			bucket[doc_id].append(score)
+
 	return bucket
+
+
+# apply the passed function to the dict of doc_id => list of scores
+def apply_comb_to_aggregated_docs_scores(docs_scores_aggregated, comb_tecnique):
+	new_run = []
+	new_score_position_in_tuple = 1
+	for doc_id, scores in docs_scores_aggregated.items():
+		new_score = float( comb_tecnique(scores) )
+		new_tuple = ( doc_id, new_score, comb_tecnique.__name__  )
+		new_run.append(new_tuple)
+
+	new_run.sort( key=lambda x: float(x[new_score_position_in_tuple]), reverse=True)
+
+	return new_run
+
+
+def combMNZ(scores):
+	score = float(sum(scores)) * float(len(scores))
+	return score
+
+def combSUM(scores):
+	return sum(scores)
+
+def combMAX(scores):
+	return max(scores)
+
+def combMIN(scores):
+	return min(scores)
+
+def combANZ(scores):
+	score = float(sum(scores)) / float(len(scores))
+	return score
+
+def combMED(scores):
+	return statistics.median(scores)

@@ -55,6 +55,57 @@ def parse_res_file(path_to_file):
 	return buckets
 
 
+# normalize given scores in 'topic_tuples' which is a list of tuples
+# return the same tuples with the new normalized score
+# normalization_method can be 'min_max' (default) or 'max'
+def normalize_scores(topic_tuples, normalization_method = "min_max"):
+	normalization_methods = ['max', 'min_max']
+	new_tuples = []
+
+	score_position_in_tuple = 1 # we expect the score to be in the second position in the tuple
+	assert(len(topic_tuples) > 0)
+	assert(normalization_method in normalization_methods)
+
+	# init min and max with first score value
+	score_min = topic_tuples[0][score_position_in_tuple]
+	score_max = topic_tuples[0][score_position_in_tuple]
+
+	# let's find the min and max score 
+	for tup in topic_tuples:
+		# update max value found
+		if tup[score_position_in_tuple] > score_max:
+			score_max = tup[score_position_in_tuple]
+		# update min value found
+		if tup[score_position_in_tuple] < score_min:
+			score_min = tup[score_position_in_tuple]
+
+	assert(score_max >= score_min)
+
+	# if the normalization method is max it means we assume the minimum score is zero
+	# max normalization
+	if normalization_method == normalization_methods[0]:
+		score_min = 0.0
+	# otherwise we use score_min and score_max as we did
+
+	# to be sure we are not using integers
+	score_max = float(score_max)
+	score_min = float(score_min)
+
+
+	# calculate the new scores
+	for tup in topic_tuples:
+		tup_current = list(tup) # maybe not the most efficient way
+		tup_current[score_position_in_tuple] = normalize_score(tup_current[score_position_in_tuple], score_max, score_min)
+		# print("new score: ", tup_current[score_position_in_tuple], " old_score: ", tup[score_position_in_tuple])
+		new_tuples.append( tuple(tup_current) )
+
+	return new_tuples
+
+
+def normalize_score(score, score_max, score_min):
+	return float(score - score_min) / float(score_max - score_min)
+
+
 
 def parse_terrier_run(run_number):
 

@@ -14,7 +14,8 @@ def main():
 	# for
 	topics_docs_scores = parse_res_file(res_files[0])
 
-	print(a["400"])
+		# for
+	print( normalize_scores(topics_docs_scores["351"], "min_max") )
 
 	# apri ogni cartella il file .res
 

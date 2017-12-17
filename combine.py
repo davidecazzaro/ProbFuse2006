@@ -19,6 +19,8 @@ def main():
 
 	# clean tmp files
 	clean_tmp_files(output_tmp_folder_path)
+
+	print("Reading res files...")
 	
 	# iterate the ten models
 	tempfilepaths = []
@@ -31,27 +33,37 @@ def main():
 			# save
 			tempfilepaths.append( append_entries_to_file_by_topic(topic_id, topics_docs_scores[topic_id], output_tmp_folder_path) )
 
+	tempfilepaths = list(set(tempfilepaths)) # remove duplicates from list
+	tempfilepaths.sort() # not needed but nicer
+
 	print("Done reading run entries of all 10 models and aggregating them by topic")
+
+	# prepare output folder to avoid overwriting or mixing results
+	output_res_folder = prepare_res_file_output_folder(output_folder_path)
 
 	for topic_file in tempfilepaths:
 		docs_scores_aggregated = parse_aggregated_topic(topic_file)
 
-		for comb_tecnique in comb_tecniques:
-			new_run = apply_comb_to_aggregated_docs_scores(docs_scores_aggregated, comb_tecnique)
+		# extract topic_id from file name
+		topic_id = topic_file.split("/")
+		topic_id = topic_id[-1].split(".")
+		topic_id = topic_id[0]
 
-			print()
-			print(comb_tecnique.__name__)
-			print("new run len: ", len(new_run))
-			print(new_run[1:20])
+		for comb_tecnique in comb_tecniques:
+			# apply the desired comb tecnique to the aggregated scores
+			new_run = apply_comb_to_aggregated_docs_scores(docs_scores_aggregated, comb_tecnique)
+			
+			# prepare tuple with trec format
+			formatted_run = format_as_trec_run(new_run, topic_id)
 
 			# append new_run to file
-		break # just to test
+			append_run_to_res_file(output_res_folder, comb_tecnique.__name__, formatted_run)
 
-	# usa i vari metodi comb per generare delle nuove run fuse
+		print("Done topic: " + str(topic_id) + "\r", end=" ")
 
-	# output un file per ogni tipo di comb con i 50 topic
-	# con i doc ordinati con i nuovi score calcolati
-
+	print()
+	print("Fusion ranking done! Output files are in '" + output_folder_path + "'")
+	
 
 if __name__ == '__main__':
    main()

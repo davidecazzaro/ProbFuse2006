@@ -7,6 +7,7 @@ import os
 import sys
 import shutil
 import statistics
+import datetime
 
 
 # check that the input folder exists
@@ -169,6 +170,45 @@ def apply_comb_to_aggregated_docs_scores(docs_scores_aggregated, comb_tecnique):
 	new_run.sort( key=lambda x: float(x[new_score_position_in_tuple]), reverse=True)
 
 	return new_run
+
+
+# add needed fields to the tuples of doc_id and scores to be saved in a res file
+def format_as_trec_run(run, topic_id):
+	formatted_run = []
+	
+	# run is a list of tuples (doc_id, score, model_name) ordered by score (desc)
+	# trec format: topic_id Q0 doc_id rank score model
+	i = 0
+	for row in run:
+		formatted_row = (topic_id, "Q0", row[0], i, row[1], row[2])
+		i += 1
+		formatted_run.append(formatted_row)
+	return formatted_run
+
+# append run to res file
+def append_run_to_res_file(output_folder, comb_tecnique, formatted_run):
+	output_file = output_folder + comb_tecnique + ".res"
+
+	# append to file
+	with open(output_file, "a") as myfile:
+		for tup in formatted_run:
+			line = " ".join(str(x) for x in tup)
+			myfile.write(line.strip() + "\n")
+
+
+# create an ad hoc folder to store results without overwriting existing ones
+def prepare_res_file_output_folder(output_folder_path):
+	now = datetime.datetime.now()
+	foldername = str(now.year) + '{:02d}'.format(now.month) + '{:02d}'.format(now.day) + "_" + '{:02d}'.format(now.hour) + '{:02d}'.format(now.minute) + '{:02d}'.format(now.second)
+	output_folder = output_folder_path + "/" + foldername + "/"
+
+	if os.path.isdir( output_folder ):
+		raise Exception("Destination folder '"+output_folder+"' already exists.")
+
+	# create folder
+	os.makedirs(os.path.dirname(output_folder))
+
+	return output_folder
 
 
 def combMNZ(scores):

@@ -47,7 +47,7 @@ def parse_res_file(path_to_file):
 			extracted_tuple = (doc_id, score)
 
 			if len(elements) != 6:
-				raise Exception("Found a line in '"+path_to_file+"' with "+str(len(line))+" elements, 6 expected: "+line )
+				raise Exception("Found a line in '"+path_to_file+"' with "+str(len(elements))+" elements, 6 expected: "+line )
 
 			if topic_id in buckets:
 				buckets[topic_id].append( extracted_tuple )
@@ -133,8 +133,21 @@ def clean_tmp_files(path_to_tmp_folder):
 	os.makedirs(os.path.dirname(path_to_tmp_folder), exist_ok=True)
 
 
+# read the file in the tmp folder
+def parse_aggregated_topic(path_to_file):
+	bucket = [] # list of tuples
+	with open(path_to_file) as fp:
+		for line in fp:
+			line = line.strip()
+			# a line contains: doc_id score model
+			tokens = line.split(' ')
+			doc_id 	= tokens[0]
+			score 	= float(tokens[1])
 
+			extracted_tuple = (doc_id, score)
 
-def parse_terrier_run(run_number):
+			if len(tokens) != 2:
+				raise Exception("Found a line in '"+path_to_file+"' with "+str(len(tokens))+" tokens, 2 expected: "+line )
 
-	return run_number
+			bucket.append( extracted_tuple )
+	return bucket

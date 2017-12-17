@@ -18,6 +18,7 @@ def main():
 	clean_tmp_files(output_tmp_folder_path)
 	
 	# iterate the ten models
+	tempfilepaths = []
 	for filepath in res_files:
 		topics_docs_scores = parse_res_file(filepath)
 
@@ -25,20 +26,19 @@ def main():
 			topics_docs_scores[topic_id] = normalize_scores(topics_docs_scores[topic_id], "min_max")
 
 			# save
-			tempfilepath = append_entries_to_file_by_topic(topic_id, topics_docs_scores[topic_id], output_tmp_folder_path)
+			tempfilepaths.append( append_entries_to_file_by_topic(topic_id, topics_docs_scores[topic_id], output_tmp_folder_path) )
 
-	# apri ogni cartella il file .res
+	print("Done reading run entries of all 10 models and aggregating them by topic")
 
-		# parse ogni riga dividendo per topic e salvando docid e sim (score)
-
-		# per ogni metodo diverso -> normalizza
-
-		# usa i vari metodi comb per generare delle nuove run fuse
+	for topic_file in tempfilepaths:
+		docs_scores = parse_aggregated_topic(topic_file)
+		print(docs_scores)
+		raise Exception("Done")
+	# usa i vari metodi comb per generare delle nuove run fuse
 
 	# output un file per ogni tipo di comb con i 50 topic
 	# con i doc ordinati con i nuovi score calcolati
 
-	print(parse_terrier_run(8))
 
 if __name__ == '__main__':
    main()

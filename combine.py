@@ -10,8 +10,8 @@ def main():
 	output_folder_path = "output/ten_models"
 	output_tmp_folder_path = output_folder_path + "/tmp/"
 
-	# comb tecniques
-	comb_tecniques = [combMNZ, combSUM, combMAX, combMIN, combANZ, combMED]
+	# comb techniques
+	comb_techniques = [combMNZ, combSUM, combMAX, combMIN, combANZ, combMED]
 
 	# check input/ten_models if there are folders "run" from 1 to 10 and get .res files 
 	check_folders_exist(input_folder_path)
@@ -49,15 +49,15 @@ def main():
 		topic_id = topic_id[-1].split(".")
 		topic_id = topic_id[0]
 
-		for comb_tecnique in comb_tecniques:
-			# apply the desired comb tecnique to the aggregated scores
-			new_run = apply_comb_to_aggregated_docs_scores(docs_scores_aggregated, comb_tecnique)
+		for comb_technique in comb_techniques:
+			# apply the desired comb technique to the aggregated scores
+			new_run = apply_comb_to_aggregated_docs_scores(docs_scores_aggregated, comb_technique)
 			
 			# prepare tuple with trec format
 			formatted_run = format_as_trec_run(new_run, topic_id)
 
 			# append new_run to file
-			append_run_to_res_file(output_res_folder, comb_tecnique.__name__, formatted_run)
+			append_run_to_res_file(output_res_folder, comb_technique.__name__, formatted_run)
 
 		print("Done topic: " + str(topic_id) + "\r", end=" ")
 

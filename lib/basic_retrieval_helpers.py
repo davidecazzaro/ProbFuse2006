@@ -153,18 +153,19 @@ def parse_aggregated_topic(path_to_file):
 
 			if not doc_id in bucket:
 				bucket[doc_id] = []
+			
 			bucket[doc_id].append(score)
 
 	return bucket
 
 
 # apply the passed function to the dict of doc_id => list of scores
-def apply_comb_to_aggregated_docs_scores(docs_scores_aggregated, comb_tecnique):
+def apply_comb_to_aggregated_docs_scores(docs_scores_aggregated, comb_technique):
 	new_run = []
 	new_score_position_in_tuple = 1
 	for doc_id, scores in docs_scores_aggregated.items():
-		new_score = float( comb_tecnique(scores) )
-		new_tuple = ( doc_id, new_score, comb_tecnique.__name__  )
+		new_score = float( comb_technique(scores) )
+		new_tuple = ( doc_id, new_score, comb_technique.__name__  )
 		new_run.append(new_tuple)
 
 	new_run.sort( key=lambda x: float(x[new_score_position_in_tuple]), reverse=True)
@@ -186,8 +187,8 @@ def format_as_trec_run(run, topic_id):
 	return formatted_run
 
 # append run to res file
-def append_run_to_res_file(output_folder, comb_tecnique, formatted_run):
-	output_file = output_folder + comb_tecnique + ".res"
+def append_run_to_res_file(output_folder, comb_technique, formatted_run):
+	output_file = output_folder + comb_technique + ".res"
 
 	# append to file
 	with open(output_file, "a") as myfile:
@@ -212,7 +213,9 @@ def prepare_res_file_output_folder(output_folder_path):
 
 
 def combMNZ(scores):
-	score = float(sum(scores)) * float(len(scores))
+	number_of_non_zero_occurrences = len(list(filter(lambda a: a != 0.0, scores)))
+
+	score = float(sum(scores)) * float( number_of_non_zero_occurrences )
 	return score
 
 def combSUM(scores):
@@ -225,7 +228,10 @@ def combMIN(scores):
 	return min(scores)
 
 def combANZ(scores):
-	score = float(sum(scores)) / float(len(scores))
+	number_of_non_zero_occurrences = len(list(filter(lambda a: a != 0.0, scores)))
+	if number_of_non_zero_occurrences == 0:
+		return 0.0 # if all scores for a doc is zero we return zero as the new score
+	score = float(sum(scores)) / float( number_of_non_zero_occurrences )
 	return score
 
 def combMED(scores):

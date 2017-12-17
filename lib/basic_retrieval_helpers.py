@@ -5,6 +5,7 @@
 
 import os
 import sys
+import shutil
 
 
 # check that the input folder exists
@@ -70,7 +71,7 @@ def normalize_scores(topic_tuples, normalization_method = "min_max"):
 	score_min = topic_tuples[0][score_position_in_tuple]
 	score_max = topic_tuples[0][score_position_in_tuple]
 
-	# let's find the min and max score 
+	# let's find the min and max score
 	for tup in topic_tuples:
 		# update max value found
 		if tup[score_position_in_tuple] > score_max:
@@ -91,7 +92,6 @@ def normalize_scores(topic_tuples, normalization_method = "min_max"):
 	score_max = float(score_max)
 	score_min = float(score_min)
 
-
 	# calculate the new scores
 	for tup in topic_tuples:
 		tup_current = list(tup) # maybe not the most efficient way
@@ -102,8 +102,36 @@ def normalize_scores(topic_tuples, normalization_method = "min_max"):
 	return new_tuples
 
 
+# normalize score given following the paper Lee95 formula for min_max normalization
+# to achieve max normalization set score_min to zero
 def normalize_score(score, score_max, score_min):
 	return float(score - score_min) / float(score_max - score_min)
+
+
+# save to temporary files the tuples
+def append_entries_to_file_by_topic(topic_id, topic_tuples, path_to_tmp_folder):
+	filenamepath =  path_to_tmp_folder + str(topic_id) + ".txt"
+
+	with open(filenamepath, "a") as myfile:
+		for tup in topic_tuples:
+			line = " ".join(str(x) for x in tup)
+			myfile.write(line.strip() + "\n")
+
+	return filenamepath
+
+
+# delete the tmp folder and recreates it
+def clean_tmp_files(path_to_tmp_folder):
+	# make sure tmp/topic_id.txt file are empty before appending, if they exist
+	if os.path.isdir(path_to_tmp_folder):
+		# delete all .txt files
+		shutil.rmtree(path_to_tmp_folder)
+		print("Cleaned all files in "+path_to_tmp_folder)
+
+	# create tmp folder if it does not exists
+	# assert(os.path.isdir(path))
+	os.makedirs(os.path.dirname(path_to_tmp_folder), exist_ok=True)
+
 
 
 

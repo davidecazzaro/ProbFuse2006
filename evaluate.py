@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 
 # plot library for our purposes
-from lib.basic_retrieval_helpers import *
+from lib.basic_retrieval_helpers import check_folders_exist
+from lib.basic_retrieval_helpers import get_res_files
+from lib.preprocessing import *
 
 def main():
 	ground_truth_path 	= "input/qrels.trec7.txt"

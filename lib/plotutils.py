@@ -76,34 +76,47 @@ def map_filter(all_features):
 		m[x] = single_file_features['map']
 	return m
 
-def plot_map(maps, show=True, save=True):
+def plot_map_comb(maps, show=True, save=True):
 	fig, ax = plt.subplots()
 
-	indexes = np.arange(len(maps))
-
 	# extracting the couple feature_name/feature_value
-	labels = [x for x in maps]
-	values = [float(maps[x]) for x in maps]
-	bar_width=0.8
+	# we force the order we want: models 1 to 10 and then the comb methods 
+	run_names = ["eval1", "eval2", "eval3", "eval4", "eval5", "eval6", "eval7", "eval8", "eval9", "eval10",
+	"combMIN", "combMAX", "combMED", "combSUM", "combANZ", "combMNZ"]
+	labels = ["BM25 \n stoplist", "BM25", "InL2  \n stoplist", "InL2", "TF_IDF \n stoplist", "TF_IDF", "DirichletLM \n stoplist", "DirichletLM", "LGD \n stoplist", "LGD",
+	"combMIN", "combMAX", "combMED", "combSUM", "combANZ", "combMNZ"]
+	values = []
+	for run_name in run_names:
+		print(run_name, maps[run_name])
+		values.append(float(maps[run_name]))
+	
+	# set colors for the bars
+	color_with_stoplist = 'blue'
+	color_no_stoplist = 'dodgerblue'
+	color_comb = 'purple'
+	colors = (color_with_stoplist, color_no_stoplist, color_with_stoplist, color_no_stoplist, color_with_stoplist, color_no_stoplist, color_with_stoplist, color_no_stoplist, color_with_stoplist, color_no_stoplist,
+	color_comb, color_comb, color_comb, color_comb, color_comb, color_comb)
 
+	# set graph bound on y axis 
 	lower_bound = min(values)
-	upper_bound = max(values)
+	upper_bound = max(values) 
+	plt.ylim(.95*lower_bound, 1.05*upper_bound)
 
-	ax.bar(indexes, values, width=bar_width, color='r', label="Maps")
+	bar_width=0.8
+	ax.bar(np.arange(len(labels)), values, width=bar_width, label="Mean Average Precision", color=colors, tick_label=labels)
 
-	ax.set_xlabel('IR Systems')
-	ax.set_ylabel('MAP')
-	ax.set_title('IR Performances')
-	ax.set_xticks(indexes + bar_width / 2)
-	ax.set_xticklabels(labels)
-	# better visualization
-
+	ax.set_xlabel('IR Models')
+	ax.set_ylabel('Mean Average Precision')
+	ax.set_title('MAP of different models on Trec-7 topics')
+	
+	# rotate labels
 	for tick in ax.get_xticklabels():
 		tick.set_rotation(90)
 
 	fig.tight_layout()
 
 	if (save):
-		fig.savefig("./output/plots/maps.png")
+		print("Saved plot to ./output/plots/comb_maps.png")
+		fig.savefig("./output/plots/comb_maps.png")
 	if (show):
 		plt.show()

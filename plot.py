@@ -29,7 +29,7 @@ def main():
 	maps = map_filter(feature_per_file)
 
 	# plotting map
-	plot_map(maps, show=False)
+	plot_map_comb(maps, show=True, save=False)
 
 if __name__ == '__main__':
    main()

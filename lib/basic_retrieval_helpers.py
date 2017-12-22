@@ -171,7 +171,9 @@ def apply_comb_to_aggregated_docs_scores(docs_scores_aggregated, comb_technique)
 
 	new_run.sort( key=lambda x: float(x[new_score_position_in_tuple]), reverse=True)
 
-	return new_run
+	# we truncate the new_run to the top 1000 documents retrieved in order
+	# to make it comparable with the original runs (each of 1000 entries)
+	return new_run[:1000]
 
 
 # add needed fields to the tuples of doc_id and scores to be saved in a res file

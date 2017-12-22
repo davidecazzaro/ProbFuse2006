@@ -12,8 +12,10 @@ def main():
 	# quick check on folder existence and its content
 	check_relevances_exist(input_folder_path)
 
-	for x in range(1,100):
-		for t in range(0.1,1,0.1):
+	# x is the number of segmentes
+	for x in [2, 4, 6, 8, 10, 15, 20, 25, 30, 40, 50, 100, 150, 200, 250, 300, 400, 500]:
+			# t is the training set size, as a percentage of the queries
+		for t in [.1, .2, .3, .4, .5]:
 			# calling the core function
 			prob_fuse(input_folder_path, output_folder_path, x, t)
 	print()

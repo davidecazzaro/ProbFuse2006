@@ -36,36 +36,26 @@ def get_eval_files(path):
 def extract_features(path):
 	# dictonary of features (i.e. "map: 0.15")
 	features = {}
-	with open(path) as fp:
+	with open("./"+path) as fp:
 		# each line has its feature name and its values; the "all" values is constant for each line (and useless)
 		for line in fp:
-			line = fp.readline()
 			# trims the string (l/r) of useless space
 			line = line.strip()
-			tmp = line.split(' ')
-			# unluckily, our input files have a lot of ' ' characters, therefore the split(' ') operation is not enough;
-			# split will return several empty elements, which should be filtered out:
-			tmp = [x for x in tmp if x!='']
-			# even more unluckily, the two last features are separated by a '\t' character and therefore we must capture them, too:
-			tmp2 = tmp[1].split('\t')
-			# last but not least, this last split operation created an empty [''] character
-			tmp2 = [x for x in tmp2 if x!='']
-			# the first element contains the feature name, straightforward
-			elements = [tmp[0]]
-			# the last two features are now contained in the tmp2 vector we just created
-			for x in tmp2:
-				elements.append(x)
+			# skip empty lines
+			if len(line) <= 0:
+				continue
 
-			feature_name = elements[0]
-			# elements[1] contains this useless "all" we can ignore
-			feature_value = float(elements[2]) # casting from string to float
-
-			if len(elements) != 3:
+			# values are separated by some spaces and one tab
+			tmp = line.split("\t")
+			
+			if len(tmp) != 3:
 				raise Exception("There's something wrong within the input files; Found a line in '"+path+"' with "+str(len(elements))+" elements, 3 expected." )
 
+			feature_name = tmp[0].strip()
+			# elements[1] contains this useless "all" we can ignore
+			feature_value = float(tmp[2].strip()) # casting from string to float
+
 			features[feature_name] = feature_value
-
-
 
 	return features
 

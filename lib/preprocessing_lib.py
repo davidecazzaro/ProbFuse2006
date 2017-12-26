@@ -12,9 +12,10 @@ import datetime
 
 def check_ground_truth_exist(path):
 	if not os.path.exists(path):
-		raise Exception("Expecting the ground truth file in the /input folder. Check README for info.")
+		raise Exception("Expecting the ground truth file in the /input folder. Check README for filename info.")
 
 # returns a dict with a key for each topic, which has a list of dicts with a key for each document ((0/1) relevance)
+# gt = {topic: {doc: rel_weight}}
 def extract_ground_truth(path):
 	gt = {}
 	with open(path) as fp:
@@ -40,8 +41,6 @@ def extract_ground_truth(path):
 # and evaluates if the retrieved document is either relevant, not relevant or neither the two options.
 # then, this function writes down the results in an output file.
 def evaluate_run(run_file, ground_truth, output_file):
-
-	print ("Evaluating at "+output_file+"	..................")
 	
 	with open(run_file) as fp:
 		with open(output_file, 'w') as writer:

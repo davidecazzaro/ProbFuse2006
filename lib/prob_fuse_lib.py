@@ -1,21 +1,59 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# helper functions to combine runs are in this file
+# everything that relates to ProbFuse2006 is in this library.
+# Enjoy.
 
 
 import os
 import random
 import numpy as np
 
+
+# this function reads from the correct input folder the two lists of parameters
+# needed to tune ProbFuseAll and ProbFuseJudged's algorithms.
+def extract_params(path):
+	if not os.path.isfile(path):
+		raise Exception("Error: cannot find the param file, you've gave me: "+path)
+	fp = open(path)
+
+	# first line: x parameter.
+	line = fp.readline().strip()
+	# our param file is like x\t=\t[1,2,3,...,n]
+	el = line.split('\t')
+	# extracts just the parameters (that are like [1, 2, 3, ..., n])
+	params = el[2]
+	# removes '[' and ']' characters
+	params = params[1:-1]
+	x = [y.strip() for y in params.split(',')]
+	# casting
+	x = [int(y) for y in x]
+
+	# second line: t parameter.
+	line = fp.readline().strip()
+	# our param file is like t\t=\t[1,2,3,...,n]
+	el = line.split('\t')
+	# extracts just the parameters (that are like [.1, .2, .3, ..., n])
+	params = el[2]
+	# removes '[' and ']' characters
+	params = params[1:-1]
+	t = [y.strip() for y in params.split(',')]
+	# casting
+	t = [float(y) for y in t]
+
+	fp.close()
+
+	return x,t
+
+
 # quick check on the relevances: does their folder exist? are there 10 files in there?
 # path: contains the path to check (a string, relative path)
 def check_relevances_exist(path):
 	if not os.path.isdir(path):
-		raise Exception("Expecting a folder in input/relevances")
+		raise Exception("Pre-processed files path doesn't exist.")
 	n_files = len(os.listdir(path))
 	if not (n_files==10):
-		raise Exception("Expecting 10 files (e.g. 'rel1.txt') in the /relevances folder, got "+str(n_files))
+		raise Exception("Expecting 10 files (e.g. 'rel1.txt') in the "+path+" folder, got "+str(n_files))
 
 # given the path of a run, returns the sizes of its topics, per topic (rows).
 # path: the correct path (string, relative path) of the file to check
@@ -81,8 +119,6 @@ def extract_relevance(in_path, segments):
 				document = elements[1]
 				# Relevance score can be either 1 (relevant), 0 (not relevant) or -1 (not graded)
 				rel_score = int(elements[2])
-
-				# now that we know which 
 
 				# if it's the first entry, create an empty dict.
 				# Each entry will be a segment inside that particular topic.

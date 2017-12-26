@@ -25,14 +25,13 @@ def folder_check(path, io=True):
 def get_eval_files(path):
 	eval_files = []
 	file_list = os.listdir(path)
-	if((len(file_list)!=16) and (len(file_list)!=17)):
-		raise Exception("We're expecting 16 evaluations (or 17): either some input is missing or there are too much files.")
 	for file in file_list:
 		eval_files.append( path+"/"+file )
 
 	return eval_files
 
 # We want to extract all the data from our input files and put it in a nice dictionary
+# {feature: value}
 def extract_features(path):
 	# dictonary of features (i.e. "map: 0.15")
 	features = {}
@@ -52,18 +51,18 @@ def extract_features(path):
 				raise Exception("There's something wrong within the input files; Found a line in '"+path+"' with "+str(len(elements))+" elements, 3 expected." )
 
 			feature_name = tmp[0].strip()
-			# elements[1] contains this useless "all" we can ignore
-			feature_value = float(tmp[2].strip()) # casting from string to float
+			# tmp[1] contains this useless "all" we can ignore
+			feature_value = tmp[2].strip() # casting from string to float
 
 			features[feature_name] = feature_value
 
 	return features
 
-def map_filter(all_features):
+def map_filter(all_files_features):
 	m = {}
-	for x in all_features:
-		single_file_features = all_features[x]
-		m[x] = single_file_features['map']
+	for x in all_files_features:
+		this_file_features = all_files_features[x]
+		m[x] = float(this_file_features['map'])
 	return m
 
 def plot_map_comb(maps, show=True, save=True):
@@ -71,7 +70,7 @@ def plot_map_comb(maps, show=True, save=True):
 
 	# extracting the couple feature_name/feature_value
 	# we force the order we want: models 1 to 10 and then the comb methods 
-	run_names = ["eval1", "eval2", "eval3", "eval4", "eval5", "eval6", "eval7", "eval8", "eval9", "eval10",
+	run_names = ["run1", "run2", "run3", "run4", "run5", "run6", "run7", "run8", "run9", "run10",
 	"combMIN", "combMAX", "combMED", "combSUM", "combANZ", "combMNZ"]
 	labels = ["BM25 \n stoplist", "BM25", "InL2  \n stoplist", "InL2", "TF_IDF \n stoplist", "TF_IDF", "DirichletLM \n stoplist", "DirichletLM", "LGD \n stoplist", "LGD",
 	"combMIN", "combMAX", "combMED", "combSUM", "combANZ", "combMNZ"]

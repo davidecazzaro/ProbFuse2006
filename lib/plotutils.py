@@ -76,7 +76,6 @@ def plot_map_comb(maps, show=True, save=True):
 	"combMIN", "combMAX", "combMED", "combSUM", "combANZ", "combMNZ"]
 	values = []
 	for run_name in run_names:
-		print(run_name, maps[run_name])
 		values.append(float(maps[run_name]))
 	
 	# set colors for the bars

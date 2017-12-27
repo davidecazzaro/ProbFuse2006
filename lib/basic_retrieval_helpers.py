@@ -11,26 +11,27 @@ import datetime
 
 
 # check that the input folder exists
-def check_folders_exist(path):
+def check_folders_exist(path, prefix="run", run_number=10):
 	if not os.path.isdir(path):
 		raise Exception("We expect a folder "+path+" which contains the 10 folders with the runs.")
 
-	for i in range(1,10+1):
-		if not os.path.isdir(path+"/run"+str(i)):
-			raise Exception("Missing folder: "+path+"/run"+str(i))
+	for i in range(1,run_number+1):
+		if not os.path.isdir(path+"/"+prefix+str(i)):
+			raise Exception("Missing folder: "+path+"/"+prefix+str(i))
 
 def check_relevances_exist(path):
 	if not os.path.exists(path):
 		raise Exception("Expecting a folder which has the evaluations. Check README for info.")
 
 # return a list with the paths of the ten .res files
-def get_res_files(path):
+def get_res_files(path, prefix="run", run_number=10, ends_with=".res"):
 	res_files = []
-	for i in range(1,10+1):
-		file_list = [f for f in os.listdir(path+"/run"+str(i)) if f.endswith('.res')]
-		if len(file_list) != 1:
-			raise Exception('There should be only one .res file in each run directory')
-		res_files.append( path+"/run"+str(i)+"/"+file_list[0] )
+	for i in range(1,run_number+1):
+		file_list = [f for f in os.listdir(path+"/"+prefix+str(i)) if f.endswith(ends_with)]
+		#if len(file_list) != 1:
+		#	raise Exception('There should be only one .res file in each run directory')
+		for f in file_list:
+			res_files.append( path+"/"+prefix+str(i)+"/"+f )
 	return res_files
 
 # return a dict with a key for each topic which contains a list with doc_id and scores

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# plot library for our purposes
 from lib.plotutils import *
 
 def main():
@@ -9,6 +8,12 @@ def main():
 	# input verify
 	input_folder="input/evaluations"
 	output_folder="output/plots"
+
+	# change these as needed, used to plot probfuse
+	folder_with_res_to_evaluate = "./../ProbFuse2006/output/probfuse/"
+	trec_eval_command = "./../materialeDelCorso/trec_eval.8.1/trec_eval"
+	qrels_file = "./../materialeDelCorso/qrels.trec7.txt"
+
 	# folders check
 	folder_check(input_folder)
 	folder_check(output_folder, False)
@@ -21,15 +26,21 @@ def main():
 	feature_per_file = {}
 	for file in file_list:
 		# removes the useless directory path ("input/evaluations") and the extension (".txt")
-		method_name = file[18:-4]
+		method_name = file.split("/")
+		method_name = method_name[-1] # take the file name
+		method_name = method_name[:-4] # remove extension
 		feature_per_file[method_name] = extract_features(file)
 	
 	# for every evaluation result, let's filter out only the features we're interested in:
-
 	maps = map_filter(feature_per_file)
 
-	# plotting map
-	plot_map_comb(maps, show=True, save=False)
+	# plotting map_comb
+	plot_map_comb(maps, show=False, save=False)
+
+	# plotting each probfuse model combination of t and x
+	print("Getting all the scores of probfuse")
+	scores = get_map_scores_for_probfuse(folder_with_res_to_evaluate, trec_eval_command, qrels_file)
+	plot_each_probfuse_map(scores, sort_by="t")
 
 if __name__ == '__main__':
    main()

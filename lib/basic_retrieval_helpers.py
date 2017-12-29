@@ -34,14 +34,21 @@ def get_res_files(path, prefix="run", run_number=10, ends_with=".res"):
 			res_files.append( path+"/"+prefix+str(i)+"/"+f )
 	return res_files
 
+def get_res_files_in_folder(folder, ends_with=".txt"):
+	res_files = []
+	file_list = [f for f in os.listdir(folder+"/") if f.endswith(ends_with)]
+	file_list = [folder+"/"+f for f in file_list]
+	return file_list
+
+
 # return a dict with a key for each topic which contains a list with doc_id and scores
 def parse_res_file(path_to_file):
 	buckets = {} # a dict of lists
 	with open(path_to_file) as fp:
 		for line in fp:
-			line = line.strip()
+			line = line.strip() # split the words ignoring whitespaces
 			# a line contains: topic_id Q0 doc_id rank score model
-			elements = line.split(' ')
+			elements = line.split()
 			topic_id 	= elements[0]
 			q0 			= elements[1]
 			doc_id 		= elements[2]

@@ -33,6 +33,36 @@ def get_map_scores_for_probfuse(folder_with_res_to_evaluate, trec_eval_command, 
 		scores.append( (model_probfuse, model_x, model_t, map_score) )
 	return scores
 
+def get_map_score(file_to_evaluate, trec_eval_command, qrels_file):
+	# command line to evaluate is:
+	# "./path/to/trec_eval  ./qrels.trec7.txt ./path/to/BM25b0.75_1.res"
+	command = [trec_eval_command, qrels_file, file_to_evaluate]
+	result = subprocess.run( command, stdout=subprocess.PIPE )
+	output = result.stdout.decode('utf-8') # get result from trec_eval command
+	map_score = get_score_from_trec_eval_output(output, score_name="map")
+	return map_score
+
+def get_map_scores(files_to_evaluate, trec_eval_command, qrels_file):
+	scores = []
+	for res in files_to_evaluate:
+		# command line to evaluate is:
+		# "./path/to/trec_eval  ./qrels.trec7.txt ./path/to/BM25b0.75_1.res"
+		command = [trec_eval_command, qrels_file, folder_with_res_to_evaluate+res ]
+		result = subprocess.run( command, stdout=subprocess.PIPE )
+		output = result.stdout.decode('utf-8') # get result from trec_eval command
+
+		map_score = get_score_from_trec_eval_output(output, score_name="map")
+
+		# remove extension from file name
+		model_name = res[:-4]
+		model_name = model_name.split("_")
+		model_probfuse = model_name[0] # probfuse judged or probfuse all
+		model_x = int(model_name[1]) # number of segments
+		model_t = float(model_name[2]) # percentage of queries used as training data
+
+		scores.append( (model_probfuse, model_x, model_t, map_score) )
+	return scores
+
 # We need a proper folder to make the script work.
 def folder_check(path, io=True):
 	if not os.path.isdir(path):
@@ -91,10 +121,13 @@ def map_filter(all_files_features):
 # returns the desired score metric
 def get_score_from_trec_eval_output(res_file, score_name="map"):
 	lines = res_file.split("\n")
-
 	for line in lines:
 		# each line has 3 fields separated by a tab
 		tokens = line.split("\t")
+
+		if(len(tokens) != 3):
+			print("Line without three tokens: ", tokens)
+			continue
 
 		score_metric_name = tokens[0].strip()
 		# tokens[1] is 'all' here
@@ -105,9 +138,107 @@ def get_score_from_trec_eval_output(res_file, score_name="map"):
 
 	raise Exception("No score metric named", score_name, "found in file: ", res_file)
 
+def autolabel(rects, ax):
+	for rect in rects:
+		height = rect.get_height()
+		ax.text(rect.get_x() + rect.get_width()/2., 1.01*height, ('%.3f' % height)[1:], ha='center', va='bottom')
 
-def plot_map_comb(maps, show=True, save=True):
+def plot_trec_map_comb(base_input_folder, comb_input_folder, trec_eval_command, qrels_file, show=True, save=True):
+	# set colors for the bars
+	color_base = 'blue'
+	color_comb = 'purple'
+	colors = []
+
+	# calculate map score for the basic runs, averaged over the run we have
+	maps = {}
+	#for i in [1,2,3,4,5]:
+	for i in [1]:
+		colors.append(color_base)
+		file_base = get_eval_files(base_input_folder+"/"+str(i))
+		five_scores = 0
+		for f in file_base:
+			five_scores += get_map_score(f, trec_eval_command, qrels_file)
+		# calculate the mean
+		label = str(i)
+		if(i == 1):
+			label="First run"
+		maps[label] = five_scores / 5.0
+	print("map score ", maps)
+
+	file_list = get_eval_files(comb_input_folder)
+	for res in file_list:
+		colors.append(color_comb)
+		key = res.split("/")
+		key = key[-1] # get filename
+		key = key[:-4] # remove extension
+		maps[key] = get_map_score(res, trec_eval_command, qrels_file)
+
+	colors.append("green")
+	maps["CombMNZ target"] = 0.25144 # from paper
+
 	fig, ax = plt.subplots()
+	ax.grid(True, color="#dddddd", zorder=0,axis='y')
+
+	run_names = [k for k in maps]
+
+	values = []
+	for run_name in run_names:
+		print(run_name, float(maps[run_name]))
+		values.append(float(maps[run_name]))
+
+
+	# set graph bound on y axis 
+	lower_bound = min(values)
+	upper_bound = max(values) 
+	plt.ylim(.95*lower_bound, 1.15*upper_bound)
+
+	bar_width=0.8
+	rects = ax.bar(np.arange(len(run_names)), values, width=bar_width, label="Mean Average Precision", color=colors, tick_label=run_names, zorder=3)
+
+	ax.set_xlabel('IR Models')
+	ax.set_ylabel('Mean Average Precision')
+	ax.set_title('MAP of first run and comb techniques on Trec-5 topics')
+
+	autolabel(rects, ax)
+
+	# rotate labels
+	for tick in ax.get_xticklabels():
+		tick.set_rotation(90)
+
+	fig.tight_layout()
+
+	if (save):
+		print("Saved plot to ./output/plots/comb_maps.png")
+		fig.savefig("./output/plots/comb_maps.png")
+	if (show):
+		plt.show()
+
+
+def plot_map_comb(base_input_folder, comb_input_folder, trec_eval_command, qrels_file, show=True, save=True):
+	# calculate map score for the basic runs, averaged over the run we have
+	maps = {}
+	for i in [1,2,3,4,5,6,7,8,9,10]: # ten models
+		file_base = get_eval_files(base_input_folder+"/run"+str(i))
+		my_file = ""
+		for f in file_base:
+			if(f[-4:] == ".res"):
+				my_file = f
+		file_base = my_file
+		if(file_base == ""):
+			raise Exception("File ending with res not found")
+		maps["eval"+str(i)] = get_map_score(file_base, trec_eval_command, qrels_file)
+	print("map score ", maps)
+
+	file_list = get_eval_files(comb_input_folder)
+	print(file_list)
+	for res in file_list:
+		key = res.split("/")
+		key = key[-1] # get filename
+		key = key[:-4] # remove extension
+		maps[key] = get_map_score(res, trec_eval_command, qrels_file)
+
+	fig, ax = plt.subplots()
+	#ax.grid(True, color="#dddddd", zorder=0)
 
 	# extracting the couple feature_name/feature_value
 	# we force the order we want: models 1 to 10 and then the comb methods 
@@ -117,6 +248,7 @@ def plot_map_comb(maps, show=True, save=True):
 	"combMIN", "combMAX", "combMED", "combSUM", "combANZ", "combMNZ"]
 	values = []
 	for run_name in run_names:
+		print(run_name, float(maps[run_name]))
 		values.append(float(maps[run_name]))
 	
 	# set colors for the bars
@@ -132,11 +264,13 @@ def plot_map_comb(maps, show=True, save=True):
 	plt.ylim(.95*lower_bound, 1.05*upper_bound)
 
 	bar_width=0.8
-	ax.bar(np.arange(len(labels)), values, width=bar_width, label="Mean Average Precision", color=colors, tick_label=labels)
+	rects = ax.bar(np.arange(len(labels)), values, width=bar_width, label="Mean Average Precision", color=colors, tick_label=labels, zorder=3)
 
 	ax.set_xlabel('IR Models')
 	ax.set_ylabel('Mean Average Precision')
 	ax.set_title('MAP of different models on Trec-7 topics')
+
+	autolabel(rects, ax)
 	
 	# rotate labels
 	for tick in ax.get_xticklabels():
@@ -199,7 +333,7 @@ def plot_each_probfuse_map(scores, sort_by="name"):
 	show = True
 
 	fig, ax = plt.subplots()
-	
+	ax.grid(True, color="#dddddd", zorder=0, axis='y')
 
 	# set graph bound on y axis 
 	lower_bound = min(values)
@@ -207,7 +341,7 @@ def plot_each_probfuse_map(scores, sort_by="name"):
 	plt.ylim(.95*lower_bound, 1.05*upper_bound)
 
 	bar_width=0.8
-	ax.bar(np.arange(len(labels)), values, width=bar_width, label="Mean Average Precision", color=colors, tick_label=labels)
+	ax.bar(np.arange(len(labels)), values, width=bar_width, label="Mean Average Precision", color=colors, tick_label=labels, zorder=3)
 
 	ax.set_xlabel('Probfuse Models')
 	ax.set_ylabel('Mean Average Precision')

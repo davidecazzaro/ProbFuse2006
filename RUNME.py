@@ -13,17 +13,17 @@
 #         - Run the ProbFuse approach with X segmentations and t% training queries;
 #         - Run the evaluations on everything done until this point (trec_eval);
 #         - Find the best parameter selection (X,t) for ProbFuse and print all the MAPS;
-#         - Plot the several MAP bar plots to get a nice comparison.
 # 
 # (0) Steps are skippable and X/t parameters can be given in input via the proper file.
 
 from 	lib.basic_retrieval_helpers 	import 	*
 from 	lib.plotutils 					import 	*
-from 	lib.preprocessing 				import 	*
+from 	lib.preprocessing_lib 			import 	*
 from 	lib.prob_fuse_lib 				import 	*
 import 	subprocess
-import pprint
-import operator
+import 	pprint
+import 	operator
+import 	datetime
 
 def main():
 	select = -1
@@ -51,6 +51,7 @@ def main():
 
 
 		print("Computing...")
+		start_time = datetime.datetime.now()
 
 		# initalizing in/outs/params
 		input_folder 	= "input/ten_models"
@@ -101,8 +102,10 @@ def main():
 
 			# Topic done!
 
+		elapsed_time = datetime.datetime.now() - start_time
 		print()
 		print("Base tecniques are now done! Output files are in '" + output_folder + "'")
+		print("Elapsed time: ", elapsed_time)
 		print()
 	
 	select = -1
@@ -124,6 +127,7 @@ def main():
 	else:
 
 		print("Preprocessing files...")
+		start_time = datetime.datetime.now()
 
 		# init updates
 		input_folder 	= "input/ten_models"
@@ -160,8 +164,10 @@ def main():
 			# this will write our "new" input file in the output folder, such that it'll be like: topic_id, doc_id, rel/notrel.
 			evaluate_run(filepath, gndt, output_folder+"/"+run_name+"_preprocessed.txt")
 
+		elapsed_time = datetime.datetime.now() - start_time
 		print()
 		print("Preprocessing is done! Output files are in '" + output_folder + "'")
+		print("Elapsed time: ", elapsed_time)
 		print()
 
 	select = -1
@@ -200,6 +206,7 @@ def main():
 		select = input("Ready to go? (press Enter to go) ")
 		# quick check on folder existence and its content
 		check_relevances_exist(input_folder)
+		time_summation = datetime.timedelta()
 		# x is the number of segmentes
 		for x in x_choices:
 			# t is the training set size, as a percentage of the queries
@@ -211,11 +218,15 @@ def main():
 						string_judge = "ProbFuseJudged"
 					else:
 						string_judge = "ProbFuseAll"
-					print("Combinining with parameters: N_SEGMENTS="+str(x)+", TRAINING_TOPICS="+str(t*50)+", "+string_judge)
+					start_time 		= datetime.datetime.now()
+					print ("Combinining with parameters: N_SEGMENTS="+str(x)+", TRAINING_TOPICS="+str(t*50)+", "+string_judge)
 					prob_fuse(input_folder, output_folder+string_judge+"_"+str(x)+"_"+str(t)+".res", x, t, judge)
+					elapsed_time 	= datetime.datetime.now() - start_time
+					time_summation += elapsed_time
 
 		print()
 		print("ProbFuse2006 done! Output files are in '" + output_folder + "'")
+		print("Elapsed time: ", time_summation)
 		print()
 	
 	select = -1
@@ -238,6 +249,7 @@ def main():
 	else:
 		print("Computing...")
 
+		start_time = datetime.datetime.now()
 		input_folders	= ["input/ten_models", "output/probfuse", "output/base_combinations"]
 		output_folders	= ["output/trec_evals/ten_models/", "output/trec_evals/probfuse/", "output/trec_evals/base_combinations/"]
 		ground_truth	= "input/qrels.trec7.txt"
@@ -269,9 +281,10 @@ def main():
 				f = open(output_folders[i]+out_file+"_eval.txt","w+")
 				f.write(result)
 				f.close()
-
+		elapsed_time = datetime.datetime.now()-start_time
 		print()
 		print("Evaluations are done! You can find them in  'output/trec_evals'")
+		print("Elapsed time: ", elapsed_time)
 		print()
 
 	select = -1
@@ -280,7 +293,7 @@ def main():
 		print("(note: this will also print all the MAPS on the shell)")
 		print("If you already had done this, you're allowed to skip this step;")
 		print("\t0: skip the base combination tecniques;")
-		print("\t5: quickly find the ProbFuse model;")
+		print("\t5: quickly find the best ProbFuse model;")
 
 		select = str(input("Your input: ")).strip()
 
@@ -322,10 +335,8 @@ def main():
 		maximum = max(maps.items(), key=operator.itemgetter(1))
 		print(maximum[0], maximum[1])
 
-		input("Press Enter to compute the MAP plots...")
+		input("Press Enter exit...")
 
-		# plotting map
-		plot_map_comb(maps, show=True, save=False)
 
 if __name__ == '__main__':
    main()

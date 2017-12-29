@@ -184,7 +184,7 @@ def compute_probabilities(in_path, n_segments, n_training_topics, judged, n_topi
 		with open(file_path) as fp:
 			# since we're training our algorithm, just read the topics that are \in training_topics.
 			# hopefully, this should improve the time complexity...
-			for line in dropwhile(lambda x,y=training_topics: x.strip().split(' ')[0] in y, fp):
+			for line in dropwhile(lambda x,y=training_topics[run_idx]: x.strip().split(' ')[0] in y, fp):
 				# extract, strip and get the line from the file
 				line = line.strip()
 				elements = line.split(' ')

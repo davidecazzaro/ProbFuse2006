@@ -153,7 +153,7 @@ def compute_probabilities(in_path, n_segments, n_training_topics, judged, n_topi
 	# sampling n_training_topics amount of topics from our dataset
 	# {run1: [topicX, topicY, ..., topicZ]}
 	training_topics = {}
-	for i in range(10):
+	for i in range(1,10+1):
 		possible_topics = range(351,400+1)
 		random_topics = random.sample(possible_topics, n_training_topics)
 		training_topics[i] = random_topics
@@ -166,9 +166,9 @@ def compute_probabilities(in_path, n_segments, n_training_topics, judged, n_topi
 	for file in file_list:
 		# extracting the run we're analyizing from the input file:
 		# we need run_idx to be an integer index between 0 and 9.
-		run_idx = int(file.strip().split('_')[0])-1
+		run_idx = int(file.strip().split('_')[0])
 		# initialization for the current run: it must contain a dict itself
-		probability_dict[run_idx+1] = {}
+		probability_dict[run_idx] = {}
 		# counter re-init; they should be like: {topic: [segment1count, segment2count, ...]}
 		are_rel 	= {}
 		arent_rel 	= {}
@@ -182,9 +182,7 @@ def compute_probabilities(in_path, n_segments, n_training_topics, judged, n_topi
 
 		# For every file (run), we now count all the occurencies of "1"s (relevant) and "0"s (not relevant)
 		with open(file_path) as fp:
-			# since we're training our algorithm, just read the topics that are \in training_topics.
-			# hopefully, this should improve the time complexity...
-			for line in dropwhile(lambda x,y=training_topics[run_idx]: x.strip().split(' ')[0] in y, fp):
+			for line in fp:
 				# extract, strip and get the line from the file
 				line = line.strip()
 				elements = line.split(' ')
@@ -193,31 +191,32 @@ def compute_probabilities(in_path, n_segments, n_training_topics, judged, n_topi
 					raise Exception("Something's wrong in the pre-processed files. I've got a line with "+len(elements)+" elements: "+line)
 				
 				# Since we've got topics between 351 and 400, the following number will be \in [351,400].
-				topic 		= int(elements[0])
+				topic = int(elements[0])
+				# since we're training our algorithm, just read the topics that are \in training_topics.
+				if (topic in training_topics[run_idx]):
+					# Relevance scores can be either 1 (relevant), 0 (not relevant) or -1 (not graded)
+					rel_score 	= int(elements[2])
+					# If a new topic is encountered, initialize the lists: are_rel[topic] = [seg0(topic)rel_count, ...],
+					# where seg0 -> seg1, etc.
+					# Also, reset the document counter and the segment counter from zero
+					if not topic in are_rel:
+						are_rel[topic] 					= np.zeros(n_segments)
+						arent_rel[topic] 				= np.zeros(n_segments)
+						i=0
+						segment_idx=0
 
-				# Relevance scores can be either 1 (relevant), 0 (not relevant) or -1 (not graded)
-				rel_score 	= int(elements[2])
-				# If a new topic is encountered, initialize the lists: are_rel[topic] = [seg0(topic)rel_count, ...],
-				# where seg0 -> seg1, etc.
-				# Also, reset the document counter and the segment counter from zero
-				if not topic in are_rel:
-					are_rel[topic] 					= np.zeros(n_segments)
-					arent_rel[topic] 				= np.zeros(n_segments)
-					i=0
-					segment_idx=0
+					if (rel_score==1):
+						are_rel[topic][segment_idx]		+= 1
+					if (rel_score==0):
+						arent_rel[topic][segment_idx]	+= 1
 
-				if (rel_score==1):
-					are_rel[topic][segment_idx]		+= 1
-				if (rel_score==0):
-					arent_rel[topic][segment_idx]	+= 1
+					# we've added a document to this segment: +1! :D
+					i+=1
 
-				# we've added a document to this segment: +1! :D
-				i+=1
-
-				# if we've filled this segment, go to the next one and re-initialize the doc counter
-				if(i>=segment_sizes[segment_idx]):
-					segment_idx+=1
-					i=0
+					# if we've filled this segment, go to the next one and re-initialize the doc counter
+					if(i>=segment_sizes[segment_idx]):
+						segment_idx+=1
+						i=0
 
 		# now that we have the counters, we can compute the probabilities we need,
 		# for each possible segment
@@ -241,20 +240,21 @@ def compute_probabilities(in_path, n_segments, n_training_topics, judged, n_topi
 			# these "+1" are needed to let this dictionary make sense
 			# e.g. "{run1: {seg1: 0.123, seg2: 0.321, ...}, ...}"
 			# something like {run0: {seg0: ...}, ...} would be less readable in our opinion
-			probability_dict[run_idx+1][seg+1] = s/n_training_topics
+			probability_dict[run_idx][seg+1] = s/n_training_topics
 
-	return probability_dict
+	return probability_dict, training_topics
 
 # Given the input files (the documents) and the pre-evaluated probabilities, this function will compute the  
 # the scores of all the documents retrieved by the 10 IR models.
 # Note that this function will automatically keep track of the segments the documents are in.
 # in_path: our input folder
 # probabilities: data structure containing the probabilities {run: {segment: P(doc_in_this_segment | this_run)}}
+# training_topics: data structure containing which topics are used to perform the training process for each run {run: [topic1, ...]}
 # n_segments: how many segments do we split our documents in?
 # topic_dim: how much large is a topic? (default: 1000)
 #
 # RETURNS: a dict "scores" with shape {topic: {doc: its_score__within_the_topic}}
-def score_evaluate(in_path, probabilities, n_segments, topic_dim):
+def score_evaluate(in_path, probabilities, training_topics, n_segments, topic_dim):
 
 	file_list = [f for f in os.listdir(in_path)]
 
@@ -279,40 +279,41 @@ def score_evaluate(in_path, probabilities, n_segments, topic_dim):
 		segment_idx=1
 		# we need to keep track of which topic we're extracting
 		current_topic=351
-
 		# For every file (run), we now compute the score for each document
 		with open(file_path) as fp:
+			# since we use the training topics to train our algorithm, it makes no sense
 			for line in fp:
 
 				line = line.strip()
 				elements = line.split(' ')
 				topic = int(elements[0])
-				doc = elements[1]
+				if not (topic in training_topics[run_idx]):
+					doc = elements[1]
 
-				# if we've never encountered this topic, we better initialize the dict
-				if not topic in scores:
-					scores[topic] = {}
-				
-				# if the document has never been encountered in this topic, we'll initialize its score.
-				if not doc in scores[topic]:
-					scores[topic][doc] = 0
+					# if we've never encountered this topic, we better initialize the dict
+					if not topic in scores:
+						scores[topic] = {}
+					
+					# if the document has never been encountered in this topic, we'll initialize its score.
+					if not doc in scores[topic]:
+						scores[topic][doc] = 0
 
-				# also, with a new topic, the doc counter and the segment index should be re-initalized
-				if(topic!=current_topic):
-					i=0
-					segment_idx=1
-					current_topic = topic
+					# also, with a new topic, the doc counter and the segment index should be re-initalized
+					if(topic!=current_topic):
+						i=0
+						segment_idx=1
+						current_topic = topic
 
-				scores[topic][doc] += probabilities[run_idx][segment_idx]/segment_idx
+					scores[topic][doc] += probabilities[run_idx][segment_idx]/segment_idx
 
-				# we've added a document to this segment: +1! :D
-				i+=1
+					# we've added a document to this segment: +1! :D
+					i+=1
 
-				# be aware that in this case segment_idx starts at 1 and goes up to n_segments:
-				# our segment_sizes is an array, and therefore accepts indexes between 0 and n_segments-1.
-				if(i>=segment_sizes[segment_idx-1]):
-					segment_idx+=1
-					i=0
+					# be aware that in this case segment_idx starts at 1 and goes up to n_segments:
+					# our segment_sizes is an array, and therefore accepts indexes between 0 and n_segments-1.
+					if(i>=segment_sizes[segment_idx-1]):
+						segment_idx+=1
+						i=0
 
 	return scores
 
@@ -341,12 +342,12 @@ def prob_fuse(in_path, out_path, n_segments, training_perc, judged=True, n_topic
 	# picking training_perc*n_topics training queries (topics), to train our ProbFuse algorithm.
 	n_tr_to = int(n_topics*training_perc)
 	# reminder; pr has the following shape: {run: {segment: probability_a_doc_is_in_segment}}
-	pr = compute_probabilities(in_path, n_segments, n_tr_to, judged, n_topics, topic_dim)
+	pr, tr_to = compute_probabilities(in_path, n_segments, n_tr_to, judged, n_topics, topic_dim)
 	
 	# With these probabilities is now possible to evaluate our scores
 	# scores will have the following shape:
 	# {topic: {doc: score}}
-	sc = score_evaluate(in_path, pr, n_segments, topic_dim)
+	sc = score_evaluate(in_path, pr, tr_to, n_segments, topic_dim)
 
 	# and print them out.
 	# Printing means saving the output file at out_path with the following format:

@@ -5,13 +5,18 @@
 # Enjoy.
 
 
-import os
-import random
-import numpy as np
+import 	os
+import 	random
+import 	numpy 		as 		np
+from 	itertools	import 	*
 
 
-# this function reads from the correct input folder the two lists of parameters
+# This function reads from the correct input folder the two lists of parameters
 # needed to tune ProbFuseAll and ProbFuseJudged's algorithms.
+#
+# path: the parameters file
+#
+# RETURNS: X and t, which are the array of segments and % required by ProbFuse
 def extract_params(path):
 	if not os.path.isfile(path):
 		raise Exception("Error: cannot find the param file, you've gave me: "+path)
@@ -45,298 +50,12 @@ def extract_params(path):
 
 	return x,t
 
-
-# quick check on the relevances: does their folder exist? are there 10 files in there?
-# path: contains the path to check (a string, relative path)
-def check_relevances_exist(path):
-	if not os.path.isdir(path):
-		raise Exception("Pre-processed files path doesn't exist.")
-	n_files = len(os.listdir(path))
-	if not (n_files==10):
-		raise Exception("Expecting 10 files (e.g. 'rel1.txt') in the "+path+" folder, got "+str(n_files))
-
-# given the path of a run, returns the sizes of its topics, per topic (rows).
-# path: the correct path (string, relative path) of the file to check
-def get_topic_sizes(path):
-	# again, it is known that we've got 50 topics per run.
-	i=np.zeros(50)
-	with open(path) as fp:
-		for line in fp:
-			line = line.strip()
-			el = line.split(' ')
-			# this "-351" is kind of ugly, but it is needed to deal with the array offset (they start at 0)!
-			topic_idx = int(el[0])-351
-			i[topic_idx]+=1
-	return i
-
-# This function receives the input folder path, the number of segments and it returns a data structure like:
-# {run: {topic: {segment: {[(doc, rel)]}}}}
-# in_path: the path of the 10 pre-processed runs (a string containing the relative path)
-# segments: the number of segments we're supposed to split our data with.
-def extract_relevance(in_path, segments):
-
-	# problem parameter:
-	n_topics=50
-	# counts the run we're extracting now; we can afford to start our counters from 1, since we've got a dict
-	run_counter = 1
-	# our output file; starts like this, since it's a dict in the first place (see function description)
-	out_dict = {}
-	
-	# extracting all the input files from our input directory
-	file_list = [f for f in os.listdir(in_path)]
-	if len(file_list) != 10:
-		raise Exception("Expecting exactly 10 pre-processed files in "+in_path+"/, 1 per run. Got "+len(file_list)+".")
-
-	# for each run
-	for file in file_list:
-		# initialization for the current run: it must contain a dict itself
-		out_dict[run_counter] = {}
-
-		file_path = in_path+"/"+file
-		# getting the size of the topics: each topic has its own size.  
-		topic_dims = get_topic_sizes(file_path)
-		# computing the segment sizes (which is different \all topic).
-		# Ceiling this value is necessary to prevent the creation of unwanted extra segments
-		segment_size = [int(x/segments) +1 for x in topic_dims]
-		# document counters: "how many documents have we scanned in this topic, yet?"
-		i=0
-		# re-initialize the segment_idx every time we've done a run.
-		# indexing starts at one, since segments conceptually are e.g. "1, 2, ... 400", exploiting the dict feature.
-		segment_idx=1
-
-		with open(file_path) as fp:
-			for line in fp:
-				# extract, strip and get the line from the file
-				line = line.strip()
-				elements = line.split(' ')
-
-				if not (len(elements)==3):
-					raise Exception("Something's wrong in the pre-processed files. I've got a line with "+len(elements)+" elements: "+line)
-				
-				# Since we've got topics between 351 and 400, the following number will be \in [351,400].
-				topic = int(elements[0])
-				# This is a document ID, a string.
-				document = elements[1]
-				# Relevance score can be either 1 (relevant), 0 (not relevant) or -1 (not graded)
-				rel_score = int(elements[2])
-
-				# if it's the first entry, create an empty dict.
-				# Each entry will be a segment inside that particular topic.
-				if not topic in out_dict[run_counter]:
-					out_dict[run_counter][topic] = {}
-					# if we encounter a new topic, the older one is done.
-					# Therefore, we can reset the document counter and the segment index,
-					# because we expect to fill the FIRST segment of the next topic.
-					# This works because the pre-processed files have their lines sorted by topic.
-					i=0
-					segment_idx=1
-
-				# if it's the first segment for this topic, create an empty list (list of docs/rel \in that segment).
-				# Each entry of the list will be a couple (doc/rel) extracted from this line.
-				if not segment_idx in out_dict[run_counter][topic]:
-					out_dict[run_counter][topic][segment_idx] = []
-
-				# update on the dictionary: tuple(this particular document, is/is not relevant),
-				# on THIS run, for THIS topic on THIS segment
-				# this horrible "-351" is needed to fix the offset in our segment_idx: it is a vector,
-				# therefore its indexes start at 0
-				out_dict[run_counter][topic][segment_idx].append((document, rel_score))
-				
-				# we've added a document to this segment: +1! :D
-				i+=1
-
-				# if we've filled this segment, go to the next one and re-initialize the doc counter
-				# this "-351" is awful, but again, it is needed to deal with the offset between topics and a standard array
-				if(i>=segment_size[topic-351]):
-					segment_idx+=1
-					i=0
-		run_counter+=1
-
-	return out_dict
-
-
-# returns the same data structure we've got in input, but with less topics.
-# dicty: our data structure to slice
-# t: the % of topics we want to give in output
-def get_training_slice(dicty, t):
-	# since t is the % of the training tuples over the entire set.
-	# we know that we have 50 topics, so...
-	new_topic_amount = int(50*t)
-
-	if(new_topic_amount<1):
-		raise Exception("The t you've selected is too small and now we obtain "+new_topic_amount+" topics to train on")
-
-
-
-	# initializing the dict
-	training_dicty = {}
-	for run in dicty:
-		# sampling new_topic_amount of topics from our input dict for each run
-		training_dicty[run] = {k: dicty[run][k] for k in random.sample(dicty[run].keys(), new_topic_amount)}
-
-	return training_dicty
-
-# Given the documents (with complete info, such as their segment) and the pre-evaluated probabilities,
-# this functions gives in output the scores of all the documents retrieved by the 10 IR models.
-# documents: our data structure {run: {topic: [(this_docum, is_rel, segment)]}}
-# probabilities: data structure containing the probabilities {run: {segment: P(doc_in_this_segment | this_run(=model))}}
-def score_evaluate(documents, probabilities):
-
-	scores = {}
-	for run in documents:
-		this_run = documents[run]
-		for topic in this_run:
-			this_topic = this_run[topic]
-			scores[topic] = {t[0]: sum(probabilities[:,t[2]-1])/t[2] for t in this_topic}
-			#for tupl in this_topic:
-			#	scores[topic][tupl[0]] = sum(probabilities[:,tupl[2]-1])/tupl[2]
-
-# Given the training set, the # of segments, the # of training queries and eventually the judged/unjudge algorithm type,
-# this function computes the probabilities of a document in a segment x to be relevant, for each run.
-# training_set: the training queries in the format {run: {topic: {segment: {[(doc, rel)]}}}}
-# n_segments: how many segments each topic is divided in
-# n_train_queries: how many training queries we expect to have inside training_set
-# prob_judge: if True, we're using the probFuseJudged algorithm; instead, if =False, we're using the probFuseAll approach.
+# This functions prints the documents' score (final output) in the given out path to file
 # 
-# RETURNS: probabilities, which is a dict with this shape: {run: {segment: probability}},
-# where probability is the probability that a given document in a segment k is relevant within the IR engine selected (run)
-def compute_probabilities(training_set, n_segments, n_train_queries, prob_judged=True):
-
-	# frac_rel will have the following shape:
-	# {run: {segment: prob}}
-	probabilities = {}
-
-	if prob_judged:
-		# evaluate the probabilities for each run
-		for run in training_set:
-			# current_run contains all the topics in it:
-			current_run = training_set[run]
-
-			# relevance counter: init (we have one counter for each segment inside a particular training topic/query)
-			are_rel 	= {}
-			# non-relevant counter (# documents judged to be not relevant to the query): init. (same)
-			arent_rel	= {}
-
-			# init for the fraction of relevant docs for this run
-			# (we have one probability for each segment (for each run))
-			probabilities[run] = {}
-
-			for topic in current_run:
-				# current_topic contains all the segments in it:
-				current_topic = current_run[topic]
-
-				are_rel[topic]		= np.zeros(n_segments)
-				arent_rel[topic]	= np.zeros(n_segments)
-
-				for segment in current_topic:
-					# tupl contains the [(doc,rel)]-like list of tuples within this segment
-					tuples = current_topic[segment]
-					# segments go from 1 to n_segments, therefore our counters (are_rel, arent_rel)
-					# must have a "-1" offset in their indexes (they go from 0 to n_segments-1).
-
-					# Number of relevant documents within this topic in this particular segment;
-					are_rel[topic][segment-1] 	= 	len([t for t in tuples if t[1]==1])
-					# Number of non-relevant documents within this topic in this particular segment:
-					arent_rel[topic][segment-1] = 	len([t for t in tuples if t[1]==0])
-
-					# this algorithm version ignores the "-1" values (unjudged documents)
-
-			# for each segment, it's time to compute the probabilities for this particular run,
-			# as it is described in the paper: average over all the training queries;
-			# in the probJudge version, the only difference is in the fraction,
-			# in which we relate to |rel|+|non_rel| documents, instead of just the cardinality of the whole segment.
-			for i in range(1,n_segments+1):
-				s = 0
-				# here, t=topic: we iterate for each topic
-				for t in are_rel:
-					# this is a very unfortunate case, but it may happen, and we just don't wanna divide by 0.
-					# unfortunate case = every document of this segment, inside this topic, is unjudged. (rel = "-1")
-					if not (are_rel[t][i-1]==0 and arent_rel[t][i-1]==0):
-						s += are_rel[t][i-1]/(are_rel[t][i-1] + arent_rel[t][i-1])
-
-				probabilities[run][i] = s/n_train_queries
-	
-	else:
-		# evaluate the probabilities for each run
-		for run in training_set:
-			# current_run contains all the topics in it:
-			current_run = training_set[run]
-
-			# relevance counter: init (we have one counter for each segment inside a particular training topic/query)
-			are_rel 				= {}
-			# non-relevant counter (# documents judged to be not relevant to the query): init. (same)
-			segment_cardinalities	= {}
-
-			# init for the fraction of relevant docs for this run
-			# (we have one probability for each segment (for each run))
-			probabilities[run] = {}
-
-			for topic in current_run:
-				# current_topic contains all the segments in it:
-				current_topic = current_run[topic]
-
-				are_rel[topic]					= np.zeros(n_segments)
-				segment_cardinalities[topic]	= np.zeros(n_segments)
-
-				for segment in current_topic:
-					# tupl contains the [(doc,rel)]-like list of tuples within this segment
-					tuples = current_topic[segment]
-
-					# segments go from 1 to n_segments, therefore our counters (are_rel, arent_rel)
-					# must have a "-1" offset in their indexes (they go from 0 to n_segments-1).
-					# counts ALL the documents inside the segment to comput
-					segment_cardinalities[topic][segment-1] = 	len(tuples)
-					# Number of relevant documents within this topic in this particular segment;
-					are_rel[topic][segment-1] 				= 	len([t for t in tuples if t[1]==1])
-
-			# for each segment, it's time to compute the probabilities for this particular run,
-			# as it is described in the paper: average over all the training queries;
-			for i in range(1,n_segments+1):
-				s = 0
-				# here, t=topic: we iterate for each topic
-				for t in are_rel:
-					s += are_rel[t][i-1]/segment_cardinalities[t][i-1]
-
-				probabilities[run][i] = s/n_train_queries
-
-	return probabilities
-	
-# Score evaluation. Given all the input and the probabilities we've computed above,
-# we give in output the following data structure: {topic: {document: its_score_within_its_topic}}
-def score_evaluate(data, probabilities):
-
-	# Creating the output, which is something like described above
-	scores = {}
-	for run in data:
-		# this_run has all the topics in this run
-		this_run = data[run]
-
-		for topic in this_run:
-			# this_topic has all the segments within this topic
-			this_topic = this_run[topic]
-
-			# If this topic hasn't been encountered yet, then instantiate a new, empty, dict
-			# which will have the following shape: {doc: prob}
-			if not (topic in scores):
-				scores[topic] = {}
-
-			for segment in this_topic:
-				# tuples has all the tuples within this segment
-				tuples = this_topic[segment]
-
-				# iterate over all the tuples we have
-				for t in tuples:
-					d = t[0]
-					# If we've never computed the score for this document (within this particular topic),
-					# initialize it at zero.
-					# The first score to be added will be at the instruction following the "if" structure.
-					if not (d in scores[topic]):
-						scores[topic][d] = 0
-
-					scores[topic][d] += probabilities[run][segment]/segment
-
-	return scores
-
+# out: output file
+# scores: dict with the following shape {topic: {doc: its_score__within_the_topic}}
+#
+# RETURNS: nothing.
 def print_scores_to_file(out, scores):
 
 	with open(out, 'w') as writer:
@@ -347,47 +66,289 @@ def print_scores_to_file(out, scores):
 			docs = scores[topic]
 			lines = []
 
-			for doc in sorted(docs, key=docs.get, reverse=True):
+			# obviously, we want our documents to be ranked from the highest-scored to the lowest one.
+			for doc in sorted(docs, key=docs.get, reverse=True)[:1000]:
 				lines.append(str(topic)+" Q0 "+doc+" "+str(i)+" "+str(docs[doc])+" ProbFuse2006")
 				i+=1
 
-			for line in lines[:1000]:
+			for line in lines:
 				writer.write(line.strip()+"\n")
-			
 
-# core function: it takes the input path of the 10 runs, the output path where it will write
-# its output (which is a TREC-format fused run), the number of segments and the % of topics
-# it'll use to train the model.
-# This function formats the data in the desired data structures by calling the above functions,
-# computes the probabilities and puts them in a nice data structure, calls the score
-# evaluation function and, finally, prints the output in the desired out_path/file
+# Given the dimension of the topics in our data (=1000) and the number of segments we want to split
+# our data in, this function computes the segment sizes for each segment.
+# Why wouldn't each segment have different lengths? Check the comments in the function if you're interested.
+# 
+# topic_dim: =1000
+# n_segments: the number of segments we split our data in.
+#
+# RETURNS: a vector of shape [seg1size, seg(n_segments)size] containing the sizes we want.
+def compute_segment_sizes(n_segments, topic_dim):
+	# Computing the segment sizes. We're assuming that each topic has constant size (=1000 by default).
+	# This phase is extra delicate and it required a little reasoning on paper sheets.
+	#
+	# If "topic_dim/n_segments" (= segment size) is an integer, then we have no problems whatsoever.
+	#
+	# If "topic_dim/n_segments" is a fractional number, we've got some rounding problems.
+	# (i.e. "1000/150" = 6.66666667 = ...?)
+	# 
+	# We've decided to split the segments as it follows:
+	# The decimal part of that ratio will represents the proportion between "larger" segments and "smaller" ones,
+	# where with "larger" segments we mean those segments which size will be rounded up (ceiling),
+	# and with "smaller" segments we mean those segments which size will be rounded down (floor).
+	# Keeping this ratio between larger and smaller sets will give equilibrium between segments sizes
+	# and it also will prevent silly bugs, like having empty segments (if we only round up(,
+	# or having more segments than we expect (if we only round down).
+	# Also, we decide to just create a segment_sizes VECTOR ([size_of_first_seg, size_of_second_seg, ...])
+	# and return it for future use, because of a performance (time complexity) factor.
+	#
+	# EXAMPLE: X=150 segments; 1000/150 --> 6.666... --> 0.66*150 = 100, number of rounded up segments
+	# (= segments of size 7); (1-0.66)*150 = 50, number of rounded down segments (= segments of size 6)
+	# 
+	# Now, this solution would introduce another rounding problem (e.g. 0.66*150 = 99), so, to prevent this mess,
+	# we get the correct proportion by remembering the reminder (100), rather than 0.66 (=100/150)
+
+	seg_rough_size 	= topic_dim/n_segments
+	rounded_down 	= int(seg_rough_size)
+	# this init might look weird, but it will be fixed below if we have rounding problems
+	# if we don't have any problems, then it's fair to have rounded_up = rounded_down.
+	rounded_up 		= rounded_down
+	# ... we should decide how many rounded up and down segments we want.
+	# the # of "rounded up" segments is exactly the reminder, following the reasoning done above.
+	remainder 		= topic_dim%n_segments
+
+	# if we haven't got any rounding problems, ...
+	if not (remainder==0):
+		# there's not "rounded_up", really: we just replace the variable to make it easier to compute later.
+		rounded_up 	+= 1
+
+	# the following list will be, as discussed, something like: [seg1size, seg2size, ..., seg(n_segments)size]
+	segment_sizes 			=	[rounded_up for x in range(remainder)]
+	segment_sizes.extend		([rounded_down for x in range(n_segments-remainder)])
+
+	return segment_sizes
+
+# Given the input set (file path to it), the # of segments, the # of training queries and the judged/all algorithm type,
+# this function computes the probability p of a document in a segment s to be relevant, for each run and for each segment.
+# 
+# in_path: relative input path, string
+# n_segments: number of segments we want to split the data with
+# n_training_topics: how many training topics we've got
+# judged: if you want to perform the probFuseJudged algorithm; =False if you want ProbFuseAll
+# n_topics: Fixed at 50 for this problem; makes no sense to change this parameter in this application
+# topic_dim: Each topic, by default, has 1000 documents. For our project, it makes no sense to change this.
+#
+# RETURNS: a "probability" dict; shape: {run: {s: p}},
+# where p is the probability that a document in segment is relevant (within run)
+def compute_probabilities(in_path, n_segments, n_training_topics, judged, n_topics, topic_dim):
+
+	# probability dictionary; shape: {run: {segment: p}},
+	# where p is the probability that a document in the segment is relevant (within the run)
+	probability_dict = {}
+	
+	# extracting all the input files from our input directory
+	file_list = [f for f in os.listdir(in_path)]
+	if len(file_list) != 10:
+		raise Exception("Expecting exactly 10 pre-processed files in "+in_path+"/, 1 per run. Got "+len(file_list)+".")
+
+	# sampling n_training_topics amount of topics from our dataset
+	# {run1: [topicX, topicY, ..., topicZ]}
+	training_topics = {}
+	for i in range(10):
+		possible_topics = range(351,400+1)
+		random_topics = random.sample(possible_topics, n_training_topics)
+		training_topics[i] = random_topics
+
+	# As a reminder, we know that sizes are the same for each run and for each topic
+	# (we always get 1000/n_segments), so we need to do this computation just once.
+	segment_sizes = compute_segment_sizes(n_segments, topic_dim)
+
+	# for each run
+	for file in file_list:
+		# extracting the run we're analyizing from the input file:
+		# we need run_idx to be an integer index between 0 and 9.
+		run_idx = int(file.strip().split('_')[0])-1
+		# initialization for the current run: it must contain a dict itself
+		probability_dict[run_idx+1] = {}
+		# counter re-init; they should be like: {topic: [segment1count, segment2count, ...]}
+		are_rel 	= {}
+		arent_rel 	= {}
+		# file path
+		file_path = in_path+"/"+file
+
+		# document counters: "how many documents have we scanned in this topic, yet?"
+		i=0
+		# re-initialize the segment_idx every time we've done a run.
+		segment_idx=0
+
+		# For every file (run), we now count all the occurencies of "1"s (relevant) and "0"s (not relevant)
+		with open(file_path) as fp:
+			# since we're training our algorithm, just read the topics that are \in training_topics.
+			# hopefully, this should improve the time complexity...
+			for line in dropwhile(lambda x,y=training_topics: x.strip().split(' ')[0] in y, fp):
+				# extract, strip and get the line from the file
+				line = line.strip()
+				elements = line.split(' ')
+
+				if not (len(elements)==3):
+					raise Exception("Something's wrong in the pre-processed files. I've got a line with "+len(elements)+" elements: "+line)
+				
+				# Since we've got topics between 351 and 400, the following number will be \in [351,400].
+				topic 		= int(elements[0])
+
+				# Relevance scores can be either 1 (relevant), 0 (not relevant) or -1 (not graded)
+				rel_score 	= int(elements[2])
+				# If a new topic is encountered, initialize the lists: are_rel[topic] = [seg0(topic)rel_count, ...],
+				# where seg0 -> seg1, etc.
+				# Also, reset the document counter and the segment counter from zero
+				if not topic in are_rel:
+					are_rel[topic] 					= np.zeros(n_segments)
+					arent_rel[topic] 				= np.zeros(n_segments)
+					i=0
+					segment_idx=0
+
+				if (rel_score==1):
+					are_rel[topic][segment_idx]		+= 1
+				if (rel_score==0):
+					arent_rel[topic][segment_idx]	+= 1
+
+				# we've added a document to this segment: +1! :D
+				i+=1
+
+				# if we've filled this segment, go to the next one and re-initialize the doc counter
+				if(i>=segment_sizes[segment_idx]):
+					segment_idx+=1
+					i=0
+
+		# now that we have the counters, we can compute the probabilities we need,
+		# for each possible segment
+		for seg in range(n_segments):
+			# sum init
+			s = 0
+
+			# here's the main difference between ProbFuseAll and ProbFuseJudged:
+			if(judged):
+				for t in training_topics[run_idx]:
+					# It is likely that rel + not_rel will be > 0, or it would mean
+					# to have ALL documents unjudged in a fixed segment/topic.
+					# rel+not_rel==0 is likely to happen with high X and low t%,
+					# so we just stay cautious and avoid dividing by zero.
+					if not (are_rel[t][seg] + arent_rel[t][seg]==0):
+						s += are_rel[t][seg]/(are_rel[t][seg]+arent_rel[t][seg])
+			else:
+				for t in training_topics[run_idx]:
+					s += are_rel[t][seg]/(segment_sizes[seg])
+
+			# these "+1" are needed to let this dictionary make sense
+			# e.g. "{run1: {seg1: 0.123, seg2: 0.321, ...}, ...}"
+			# something like {run0: {seg0: ...}, ...} would be less readable in our opinion
+			probability_dict[run_idx+1][seg+1] = s/n_training_topics
+
+	return probability_dict
+
+# Given the input files (the documents) and the pre-evaluated probabilities, this function will compute the  
+# the scores of all the documents retrieved by the 10 IR models.
+# Note that this function will automatically keep track of the segments the documents are in.
+# in_path: our input folder
+# probabilities: data structure containing the probabilities {run: {segment: P(doc_in_this_segment | this_run)}}
+# n_segments: how many segments do we split our documents in?
+# topic_dim: how much large is a topic? (default: 1000)
+#
+# RETURNS: a dict "scores" with shape {topic: {doc: its_score__within_the_topic}}
+def score_evaluate(in_path, probabilities, n_segments, topic_dim):
+
+	file_list = [f for f in os.listdir(in_path)]
+
+	# we assume that file_list has 10 files, at this point;
+	# if there was a problem with our input files, we would have noticed by now.
+
+	# output init
+	scores = {}
+	segment_sizes = compute_segment_sizes(n_segments, topic_dim)
+	# for each run:
+	for file in file_list:
+		# extracting the run we're analyizing from the input file:
+		# we need run_idx to be an integer index between 1 and 10.
+		run_idx = int(file.strip().split('_')[0])
+		
+		# file path
+		file_path = in_path+"/"+file
+
+		# document counters: "how many documents have we scanned in this topic, yet?"
+		i=0
+		# re-initialize the segment_idx every time we've done a run.
+		segment_idx=1
+		# we need to keep track of which topic we're extracting
+		current_topic=351
+
+		# For every file (run), we now compute the score for each document
+		with open(file_path) as fp:
+			for line in fp:
+
+				line = line.strip()
+				elements = line.split(' ')
+				topic = int(elements[0])
+				doc = elements[1]
+
+				# if we've never encountered this topic, we better initialize the dict
+				if not topic in scores:
+					scores[topic] = {}
+				
+				# if the document has never been encountered in this topic, we'll initialize its score.
+				if not doc in scores[topic]:
+					scores[topic][doc] = 0
+
+				# also, with a new topic, the doc counter and the segment index should be re-initalized
+				if(topic!=current_topic):
+					i=0
+					segment_idx=1
+					current_topic = topic
+
+				scores[topic][doc] += probabilities[run_idx][segment_idx]/segment_idx
+
+				# we've added a document to this segment: +1! :D
+				i+=1
+
+				# be aware that in this case segment_idx starts at 1 and goes up to n_segments:
+				# our segment_sizes is an array, and therefore accepts indexes between 0 and n_segments-1.
+				if(i>=segment_sizes[segment_idx-1]):
+					segment_idx+=1
+					i=0
+
+	return scores
+
+# Our core function: it takes the input path of the 10 runs, the output path where it will write
+# its output (which is a TREC-format fused run), the number of segments, the % of topics
+# it'll use to train the model and the "judged" parameter to choose whichever algorithm we want.
+# 
+# All other parameters are fixed parameters that shouldn't be changed (problem requirements).
+#
+# This function calles the function that computes the probabilities required by the studied paper,
+# calls the score evaluation function and, finally, prints the output in the desired out_path/file.
+#
 # in_path: relative input path, string
 # out_path: relative output path, string
-# segments: number of segments we want to split the data with
+# n_segments: number of segments we want to split the data with
 # training_perc: how much % do we want to take out for the training process
+# judged=True: if you want to perform the probFuseJudged algorithm; =False if you want ProbFuseAll
+# n_topics=50: Fixed at 50 for this problem; makes no sense to change this parameter in this application
+# topic_dim=1000: Each topic, by default, has 1000 documents. For our project, it makes no sense to change this.
+#
+# RETURNS: nothing.
 
-def prob_fuse(in_path, out_path, segments, training_perc, judged=True):
+def prob_fuse(in_path, out_path, n_segments, training_perc, judged=True, n_topics=50, topic_dim = 1000):
 
-	# put what we have pre-processed from our files to a well-designed data structure,
-	# like this: {run: {topic: {segment: [(doc, rel)]}}}
-	all_relevances = extract_relevance(in_path, segments)
-
-	# only a % of the queries (topics) are used to train the model
-	training_relevances = get_training_slice(all_relevances, training_perc)
-
-	# how much topics (=queries) did we use to the traning process?
-	# we know that in our application we have 50 total topics
-	# and that only (training_perc)% will be used to train the algorithm
-	q = int(50*training_perc)
-
-	probs = compute_probabilities(training_relevances, segments, q, prob_judged=judged)
-
+	
+	# picking training_perc*n_topics training queries (topics), to train our ProbFuse algorithm.
+	n_tr_to = int(n_topics*training_perc)
+	# reminder; pr has the following shape: {run: {segment: probability_a_doc_is_in_segment}}
+	pr = compute_probabilities(in_path, n_segments, n_tr_to, judged, n_topics, topic_dim)
+	
 	# With these probabilities is now possible to evaluate our scores
 	# scores will have the following shape:
 	# {topic: {doc: score}}
-	scores = score_evaluate(all_relevances, probs)
+	sc = score_evaluate(in_path, pr, n_segments, topic_dim)
 
 	# and print them out.
 	# Printing means saving the output file at out_path with the following format:
 	# <N_TOPIC> <Q0> <DOC_NAME> <INV_IDX> <SCORE> <FUSION_NAME>
-	print_scores_to_file(out_path, scores)
+	print_scores_to_file(out_path, sc)

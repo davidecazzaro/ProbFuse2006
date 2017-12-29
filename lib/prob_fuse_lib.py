@@ -10,6 +10,18 @@ import 	random
 import 	numpy 		as 		np
 from 	itertools	import 	*
 
+def clean_out_files(output_folder):
+	
+	# make sure tmp/topic_id.txt file are empty before appending, if they exist
+	if os.path.isdir(output_folder):
+		# delete all .txt files
+		shutil.rmtree(output_folder)
+		print("Cleaned all files in "+output_folder)
+
+	# create tmp folder if it does not exists
+	# assert(os.path.isdir(path))
+	os.makedirs(os.path.dirname(output_folder), exist_ok=True)
+
 
 # This function reads from the correct input folder the two lists of parameters
 # needed to tune ProbFuseAll and ProbFuseJudged's algorithms.

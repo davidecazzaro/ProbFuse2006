@@ -8,6 +8,7 @@ def main():
 	show_map_comb = True
 	show_map_comb_trec5 = False
 	show_probfuse = False
+	show_comb_max_minmax = False
 
 	map_comb_base_input_folder = "input/ten_models"
 	map_comb_comb_input_folder = "output/ten_models/20171229_180835"
@@ -18,6 +19,10 @@ def main():
 
 	# change these as needed, used to plot probfuse
 	folder_with_res_to_evaluate = "./output/probfuse/"
+
+	# plot side by side comb with max and minmax normalization
+	comb_max_folder = "output/ten_models_max/20171230_171440"
+	comb_minmax_folder = "output/ten_models/20171229_180835"
 
 	trec_eval_command = "./../materialeDelCorso/trec_eval.8.1/trec_eval"
 	qrels3_file = "./input/qrels.trec3.txt"
@@ -37,6 +42,9 @@ def main():
 		print("Getting all the scores of probfuse")
 		scores = get_map_scores_for_probfuse(folder_with_res_to_evaluate, trec_eval_command, qrels7_file)
 		plot_each_probfuse_map(scores, sort_by="t")
+
+	if show_comb_max_minmax:
+		plot_comb_max_min(comb_max_folder, comb_minmax_folder, trec_eval_command, qrels7_file)
 
 if __name__ == '__main__':
    main()

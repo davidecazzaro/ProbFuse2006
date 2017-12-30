@@ -167,14 +167,15 @@ def plot_trec_map_comb(base_input_folder, comb_input_folder, trec_eval_command, 
 
 	file_list = get_eval_files(comb_input_folder)
 	for res in file_list:
-		colors.append(color_comb)
 		key = res.split("/")
 		key = key[-1] # get filename
 		key = key[:-4] # remove extension
-		maps[key] = get_map_score(res, trec_eval_command, qrels_file)
+		if key == "combMNZ":
+			colors.append(color_comb)
+			maps[key] = get_map_score(res, trec_eval_command, qrels_file)
 
 	colors.append("green")
-	maps["CombMNZ target"] = 0.25144 # from paper
+	maps["10% combMNZ \n ProbFuse target"] = 0.25144 # from paper
 
 	fig, ax = plt.subplots()
 	ax.grid(True, color="#dddddd", zorder=0,axis='y')
@@ -190,20 +191,20 @@ def plot_trec_map_comb(base_input_folder, comb_input_folder, trec_eval_command, 
 	# set graph bound on y axis 
 	lower_bound = min(values)
 	upper_bound = max(values) 
-	plt.ylim(.95*lower_bound, 1.15*upper_bound)
+	plt.ylim(.95*lower_bound, 1.05*upper_bound)
 
-	bar_width=0.8
-	rects = ax.bar(np.arange(len(run_names)), values, width=bar_width, label="Mean Average Precision", color=colors, tick_label=run_names, zorder=3)
+	bar_width=.8
+	rects = ax.bar(np.arange(len(maps)), values, width=bar_width, label="Mean Average Precision", color=colors, tick_label=run_names, zorder=3)
 
-	ax.set_xlabel('IR Models')
+	#ax.set_xlabel('IR Models')
 	ax.set_ylabel('Mean Average Precision')
 	ax.set_title('MAP of first run and comb techniques on Trec-5 topics')
 
 	autolabel(rects, ax)
 
 	# rotate labels
-	for tick in ax.get_xticklabels():
-		tick.set_rotation(90)
+	#for tick in ax.get_xticklabels():
+	#	tick.set_rotation(90)
 
 	fig.tight_layout()
 

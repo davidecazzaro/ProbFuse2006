@@ -28,7 +28,7 @@ The work is split in two parts:
        (this requires, obviously, that you've run all the steps in the correct order at least once).
 
 
-# Development scripts --- YOU CAN IGNORE THIS ---
+# Development scripts
 
   - Run `python3 combine.py` to execute the first part of the project. This will read the 10 runs, normalize the scores and aggregate the run using
     the different fusion ranking techniques: combMNZ, combMAX, combMIN, combSUM, combANZ, combMED.

@@ -4,7 +4,7 @@
 # plot library for our purposes
 from lib.basic_retrieval_helpers import check_folders_exist
 from lib.basic_retrieval_helpers import get_res_files
-from lib.preprocessing import *
+from lib.preprocessing_lib import *
 
 def main():
 	ground_truth_path 	= "input/qrels.trec7.txt"

@@ -9,7 +9,7 @@ from lib.preprocessing_lib import *
 def main():
 	ground_truth_path 	= "input/qrels.trec7.txt"
 	input_folder_path 	= "input/ten_models"
-	output_folder_path 	= "output/relevance_scores"
+	output_folder_path 	= "output/preprocessed_scores"
 
 	# verifying and extracting inputs
 	check_folders_exist(input_folder_path)
@@ -37,7 +37,7 @@ def main():
 		run_name = filepath[20:].split('/')[0]
 
 		# this will write our "new" input file in the output folder, such that it'll be like: topic_id, doc_id, rel/notrel.
-		evaluate_run(filepath, gndt, output_folder_path+"/rel"+run_name+".txt")
+		evaluate_run(filepath, gndt, output_folder_path+"/rel"+run_name+"_preprocessed.txt")
 
 	print ("Done!")
 

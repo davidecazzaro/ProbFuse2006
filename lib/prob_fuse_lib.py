@@ -5,10 +5,11 @@
 # Enjoy.
 
 
-import 	os
-import 	random
-import 	numpy 		as 		np
+import os
+import random
+import numpy 		as 		np
 from 	itertools	import 	*
+import shutil
 
 def clean_out_files(output_folder):
 	
@@ -21,6 +22,14 @@ def clean_out_files(output_folder):
 	# create tmp folder if it does not exists
 	# assert(os.path.isdir(path))
 	os.makedirs(os.path.dirname(output_folder), exist_ok=True)
+
+def check_relevances_exist(path):
+	if not os.path.isdir(path):
+		raise Exception("Expecting a folder "+path)
+	n_files = len(os.listdir(path))
+	if n_files != 10:
+		raise Exception("Expecting 10 files like 'rel1.txt' in the relevances folder, got "+str(n_files))
+
 
 
 # This function reads from the correct input folder the two lists of parameters

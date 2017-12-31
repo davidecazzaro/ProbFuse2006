@@ -138,10 +138,10 @@ def get_score_from_trec_eval_output(res_file, score_name="map"):
 
 	raise Exception("No score metric named", score_name, "found in file: ", res_file)
 
-def autolabel(rects, ax):
+def autolabel(rects, ax, height_correction=0):
 	for rect in rects:
 		height = rect.get_height()
-		ax.text(rect.get_x() + rect.get_width()/2., 1.01*height, ('%.3f' % height)[1:], ha='center', va='bottom')
+		ax.text(rect.get_x() + rect.get_width()/2., 1.01*height-height_correction, ('%.3f' % height)[1:], ha='center', va='bottom')
 
 def plot_trec_map_comb(base_input_folder, comb_input_folder, trec_eval_command, qrels_file, show=True, save=True):
 	# set colors for the bars
@@ -252,6 +252,10 @@ def plot_map_comb(base_input_folder, comb_input_folder, trec_eval_command, qrels
 		print(run_name, float(maps[run_name]))
 		values.append(float(maps[run_name]))
 	
+	# calculate dotted threshold line value
+	threshold = max(values[:10])
+	print("Threshold: ", threshold) 
+
 	# set colors for the bars
 	color_with_stoplist = 'blue'
 	color_no_stoplist = 'dodgerblue'
@@ -271,7 +275,10 @@ def plot_map_comb(base_input_folder, comb_input_folder, trec_eval_command, qrels
 	ax.set_ylabel('Mean Average Precision')
 	ax.set_title('MAP of different models on Trec-7 topics')
 
-	autolabel(rects, ax)
+	# plot the orizontal line
+	plt.axhline(y=threshold-0.00001, color="dodgerblue", linestyle="dashdot", linewidth=.4)
+
+	autolabel(rects, ax, height_correction=0.0015)
 	
 	# rotate labels
 	for tick in ax.get_xticklabels():

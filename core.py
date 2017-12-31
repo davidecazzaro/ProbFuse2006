@@ -21,18 +21,18 @@ def main():
 	check_relevances_exist(input_folder_path)
 
 	# x is the number of segmentes
-		for x in x_choices:
-			# t is the training set size, as a percentage of the queries
-			for t in t_choices:
-				# For each ProbFuse configuration, we want to try ProbFuseAll and ProbFuseJudged
-				for judge in [True, False]:
-					# calling the core function
-					if judge:
-						string_judge = "ProbFuseJudged"
-					else:
-						string_judge = "ProbFuseAll"
-					print ("Combinining with parameters: N_SEGMENTS="+str(x)+", TRAINING_TOPICS="+str(t*50)+", "+string_judge)
-					prob_fuse(input_folder_path, output_folder_path+string_judge+"_"+str(x)+"_"+str(t)+".res", x, t, judge)
+	for x in x_choices:
+		# t is the training set size, as a percentage of the queries
+		for t in t_choices:
+			# For each ProbFuse configuration, we want to try ProbFuseAll and ProbFuseJudged
+			for judge in [True, False]:
+				# calling the core function
+				if judge:
+					string_judge = "ProbFuseJudged"
+				else:
+					string_judge = "ProbFuseAll"
+				print ("Combinining with parameters: N_SEGMENTS="+str(x)+", TRAINING_TOPICS="+str(t*50)+", "+string_judge)
+				prob_fuse(input_folder_path, output_folder_path+string_judge+"_"+str(x)+"_"+str(t)+".res", x, t, judge)
 
 	print()
 	print("ProbFuse2006 done! Output files are in '" + output_folder_path + "'")

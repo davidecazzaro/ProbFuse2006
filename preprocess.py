@@ -37,7 +37,7 @@ def main():
 		run_name = filepath[20:].split('/')[0]
 
 		# this will write our "new" input file in the output folder, such that it'll be like: topic_id, doc_id, rel/notrel.
-		evaluate_run(filepath, gndt, output_folder_path+"/rel"+run_name+"_preprocessed.txt")
+		evaluate_run(filepath, gndt, output_folder_path+"/"+run_name+"_preprocessed.txt")
 
 	print ("Done!")
 

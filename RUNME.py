@@ -197,6 +197,7 @@ def main():
 		output_folder 	= "output/probfuse/"
 
 		x_choices, t_choices = extract_params(param_folder)
+		clean_out_files(output_folder)
 
 		print()
 		print("X: "+str(x_choices))
@@ -255,8 +256,8 @@ def main():
 		ground_truth	= "input/qrels.trec7.txt"
 
 		# this path is required to run this script. Better check if it's there.
-		if not os.path.isdir("output/trec_evals"):
-			os.makedirs(os.path.dirname("output/trec_evals"), exist_ok=True)
+		for output_folder in output_folders:
+			clean_out_files(output_folder)
 
 		for i in range(3):
 			# Recursive file extract, looks for ".res" files only.
@@ -278,6 +279,7 @@ def main():
 				if not os.path.isdir(output_folders[i]):
 					os.makedirs(os.path.dirname(output_folders[i]), exist_ok=True)
 
+				print ("Evaluating "+out_file)
 				f = open(output_folders[i]+out_file+"_eval.txt","w+")
 				f.write(result)
 				f.close()

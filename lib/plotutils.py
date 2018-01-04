@@ -308,11 +308,11 @@ def plot_each_probfuse_map(scores, sort_by="name"):
 		raise Exception("Unknown probfuse sorting "+sort_by+". Sort options are: "+" ".join(sort_by_options))
 
 	if sort_by == sort_by_options[0]:
-		scores.sort(key=lambda x: x[0]+" "+str(x[1])+" "+str(x[2]))
+		scores.sort(key=lambda x: x[0]+" "+"%03d" % x[1]+" "+"%.1f" % (x[2] * 10))
 	if sort_by == sort_by_options[1]:
-		scores.sort(key=lambda x: x[1])
+		scores.sort(key=lambda x: "%03d" % x[1] + "%.1f" % (x[2] * 10) + x[0] )
 	if sort_by == sort_by_options[2]:
-		scores.sort(key=lambda x: x[2])
+		scores.sort(key=lambda x: "%.1f" % (x[2] * 10)  + "_" + "%03d" % (x[1]) + x[0] )
 	if sort_by == sort_by_options[3]:
 		scores.sort(key=lambda x: x[3])
 	if sort_by == sort_by_options[4]:
@@ -361,7 +361,7 @@ def plot_each_probfuse_map(scores, sort_by="name"):
 	ax.set_ylabel('Mean Average Precision')
 	ax.set_title('MAP of different models on Trec-7 topics, varying x and t')
 
-	ax.legend( (rect[1], rect[8]), ('ProbFuseAll', 'ProbFuseJudged') )
+	ax.legend( (rect[1+1], rect[8+1]), ('ProbFuseAll', 'ProbFuseJudged') )
 	
 	# rotate labels
 	for tick in ax.get_xticklabels():

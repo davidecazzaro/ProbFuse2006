@@ -19,6 +19,7 @@ def main():
 
 	# change these as needed, used to plot probfuse
 	probfuse_res_folders = ["output/probfuse/","output/probfuse_2/","output/probfuse_3/","output/probfuse_4/","output/probfuse_5/"]
+	probfuse_plot_sort_by = "x" # you can sort by ["name", "x", "t", "score", "adjacent"] (x is number of segments)
 
 	# plot side by side comb with max and minmax normalization
 	comb_max_folder = "output/ten_models_max/20171230_171440"
@@ -58,7 +59,7 @@ def main():
 			a = key.split("_")
 			scores.append( (a[0], int(a[1]), float(a[2]), scores_dict[key] / float(len(probfuse_res_folders)) ) )
 		
-		plot_each_probfuse_map(scores, sort_by="adjacent") # you can sort by ["name", "x", "t", "score", "adjacent"]
+		plot_each_probfuse_map(scores, sort_by=probfuse_plot_sort_by) # you can sort by ["name", "x", "t", "score", "adjacent"]
 
 	if show_comb_max_minmax:
 		plot_comb_max_min(comb_max_folder, comb_minmax_folder, trec_eval_command, qrels7_file)

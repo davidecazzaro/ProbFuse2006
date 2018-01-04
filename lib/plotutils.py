@@ -303,7 +303,7 @@ def plot_each_probfuse_map(scores, sort_by="name"):
 	#plt.close()
 
 	# sort them by 
-	sort_by_options = ["name", "x", "t", "score"]
+	sort_by_options = ["name", "x", "t", "score", "adjacent"]
 	if not (sort_by in sort_by_options):
 		raise Exception("Unknown probfuse sorting "+sort_by+". Sort options are: "+" ".join(sort_by_options))
 
@@ -315,6 +315,8 @@ def plot_each_probfuse_map(scores, sort_by="name"):
 		scores.sort(key=lambda x: x[2])
 	if sort_by == sort_by_options[3]:
 		scores.sort(key=lambda x: x[3])
+	if sort_by == sort_by_options[4]:
+		scores.sort(key=lambda x: ("%3d" % x[1] + "%.1f" % x[2] + x[0] )   )
 
 	labels = []
 	values = []
@@ -332,7 +334,7 @@ def plot_each_probfuse_map(scores, sort_by="name"):
 		if flag:
 			labels.append( str(tup[1])+" "+str(tup[2]))
 		else:
-			labels.append( str(tup[1])+" "+str(tup[2]) + "           " )
+			labels.append( str(tup[1])+" "+str(tup[2]) + "             " )
 		flag = 1 - flag
 
 		# score
@@ -359,7 +361,7 @@ def plot_each_probfuse_map(scores, sort_by="name"):
 	ax.set_ylabel('Mean Average Precision')
 	ax.set_title('MAP of different models on Trec-7 topics, varying x and t')
 
-	ax.legend( (rect[0], rect[8]), ('ProbFuseAll', 'ProbFuseJudged') )
+	ax.legend( (rect[1], rect[8]), ('ProbFuseAll', 'ProbFuseJudged') )
 	
 	# rotate labels
 	for tick in ax.get_xticklabels():

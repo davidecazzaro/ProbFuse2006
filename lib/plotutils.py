@@ -298,9 +298,9 @@ def plot_each_probfuse_map(scores, sort_by="name"):
 	#scores = get_map_scores_for_probfuse()
 
 	# clean plt
-	plt.clf()
-	plt.cla()
-	plt.close()
+	#plt.clf()
+	#plt.cla()
+	#plt.close()
 
 	# sort them by 
 	sort_by_options = ["name", "x", "t", "score"]
@@ -319,6 +319,7 @@ def plot_each_probfuse_map(scores, sort_by="name"):
 	labels = []
 	values = []
 	colors = []
+	flag = 1
 	for tup in scores:
 		
 		# cutoff plot
@@ -327,7 +328,13 @@ def plot_each_probfuse_map(scores, sort_by="name"):
 		
 		# name + x + t
 		print(tup)
-		labels.append( tup[0]+" "+str(tup[1])+" "+str(tup[2]))
+		#labels.append( tup[0]+" "+str(tup[1])+" "+str(tup[2]))
+		if flag:
+			labels.append( str(tup[1])+" "+str(tup[2]))
+		else:
+			labels.append( str(tup[1])+" "+str(tup[2]) + "           " )
+		flag = 1 - flag
+
 		# score
 		values.append(tup[3])
 
@@ -336,9 +343,6 @@ def plot_each_probfuse_map(scores, sort_by="name"):
 			colors.append("blue")
 		else:
 			colors.append("dodgerblue")
-
-	save = False
-	show = True
 
 	fig, ax = plt.subplots()
 	ax.grid(True, color="#dddddd", zorder=0, axis='y')
@@ -349,23 +353,21 @@ def plot_each_probfuse_map(scores, sort_by="name"):
 	plt.ylim(.95*lower_bound, 1.05*upper_bound)
 
 	bar_width=0.8
-	ax.bar(np.arange(len(labels)), values, width=bar_width, label="Mean Average Precision", color=colors, tick_label=labels, zorder=3)
+	rect = ax.bar(np.arange(len(labels)), values, width=bar_width, label="Mean Average Precision", color=colors, tick_label=labels, zorder=3)
 
 	ax.set_xlabel('Probfuse Models')
 	ax.set_ylabel('Mean Average Precision')
 	ax.set_title('MAP of different models on Trec-7 topics, varying x and t')
+
+	ax.legend( (rect[0], rect[8]), ('ProbFuseAll', 'ProbFuseJudged') )
 	
 	# rotate labels
 	for tick in ax.get_xticklabels():
 		tick.set_rotation(90)
 
 	fig.tight_layout()
+	plt.show()
 
-	if (save):
-		print("Saved plot to ./output/plots/comb_maps.png")
-		#fig.savefig("./output/plots/comb_maps.png")
-	if (show):
-		plt.show()
 
 def get_file_name_from_path(path):
 	f = path.split("/")

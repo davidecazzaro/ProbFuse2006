@@ -5,9 +5,9 @@ from lib.plotutils import *
 
 def main():
 	# options
-	show_map_comb = True
+	show_map_comb = False
 	show_map_comb_trec5 = False
-	show_probfuse = False
+	show_probfuse = True
 	show_comb_max_minmax = False
 
 	map_comb_base_input_folder = "input/ten_models"
@@ -18,7 +18,7 @@ def main():
 	trec5_map_comb_comb_input_folder = "output/trec5/20171229_115824"
 
 	# change these as needed, used to plot probfuse
-	folder_with_res_to_evaluate = "./output/probfuse/"
+	folder_with_res_to_evaluate = "output/probfuse/"
 
 	# plot side by side comb with max and minmax normalization
 	comb_max_folder = "output/ten_models_max/20171230_171440"
@@ -41,7 +41,7 @@ def main():
 	if(show_probfuse):
 		print("Getting all the scores of probfuse")
 		scores = get_map_scores_for_probfuse(folder_with_res_to_evaluate, trec_eval_command, qrels7_file)
-		plot_each_probfuse_map(scores, sort_by="t")
+		plot_each_probfuse_map(scores, sort_by="x") # you can sort by ["name", "x", "t", "score"]
 
 	if show_comb_max_minmax:
 		plot_comb_max_min(comb_max_folder, comb_minmax_folder, trec_eval_command, qrels7_file)

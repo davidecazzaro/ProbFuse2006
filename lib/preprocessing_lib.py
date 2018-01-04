@@ -22,13 +22,14 @@ def extract_ground_truth(path):
 		for line in fp:
 			line = line.strip()
 			# each line has: top_id, q0, doc_id, rel_weight. Therefore:
-			el = line.split(' ')
+			el = line.split()
 
 			if len(el) != 4:
 				raise Exception("Something is wrong in '"+path+"': "+str(len(el))+" elements found, 4 expected: "+line)
-			tid 	= el[0]
-			did 	= el[2]
-			rel_w 	= el[3]
+
+			tid 	= el[0].strip()
+			did 	= el[2].strip()
+			rel_w 	= el[3].strip()
 
 			if not tid in gt:
 				gt[tid] = {}
@@ -46,7 +47,7 @@ def evaluate_run(run_file, ground_truth, output_file):
 		with open(output_file, 'w') as writer:
 			for line in fp:
 				line = line.strip()
-				el = line.split(' ')
+				el = line.split()
 				topic_id 	= el[0]
 				doc_id 		= el[2]
 

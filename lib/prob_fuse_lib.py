@@ -160,6 +160,7 @@ def compute_segment_sizes(n_segments, topic_dim):
 #
 # RETURNS: a "probability" dict; shape: {run: {s: p}},
 # where p is the probability that a document in segment is relevant (within run)
+# RETURNS: a vector containing the training topics, chosen randomly, so that we can remember which one were chosen
 def compute_probabilities(in_path, n_segments, n_training_topics, judged, n_topics, topic_dim):
 
 	# probability dictionary; shape: {run: {segment: p}},
@@ -172,12 +173,9 @@ def compute_probabilities(in_path, n_segments, n_training_topics, judged, n_topi
 		raise Exception("Expecting exactly 10 pre-processed files in "+in_path+"/, 1 per run. Got "+len(file_list)+".")
 
 	# sampling n_training_topics amount of topics from our dataset
-	# {run1: [topicX, topicY, ..., topicZ]}
-	training_topics = {}
-	for i in range(1,10+1):
-		possible_topics = range(351,400+1)
-		random_topics = random.sample(possible_topics, n_training_topics)
-		training_topics[i] = random_topics
+	possible_topics = range(351,400+1)
+	# our training_topics is a vector of randomly chosen topics: [topicX, topicY, ..., topicZ]
+	training_topics = random.sample(possible_topics, n_training_topics)
 
 	# As a reminder, we know that sizes are the same for each run and for each topic
 	# (we always get 1000/n_segments), so we need to do this computation just once.
@@ -214,7 +212,7 @@ def compute_probabilities(in_path, n_segments, n_training_topics, judged, n_topi
 				# Since we've got topics between 351 and 400, the following number will be \in [351,400].
 				topic = int(elements[0])
 				# since we're training our algorithm, just read the topics that are \in training_topics.
-				if (topic in training_topics[run_idx]):
+				if (topic in training_topics):
 					# Relevance scores can be either 1 (relevant), 0 (not relevant) or -1 (not graded)
 					rel_score 	= int(elements[2])
 					# If a new topic is encountered, initialize the lists: are_rel[topic] = [seg0(topic)rel_count, ...],
@@ -247,15 +245,15 @@ def compute_probabilities(in_path, n_segments, n_training_topics, judged, n_topi
 
 			# here's the main difference between ProbFuseAll and ProbFuseJudged:
 			if(judged):
-				for t in training_topics[run_idx]:
+				for t in training_topics:
 					# It is likely that rel + not_rel will be > 0, or it would mean
 					# to have ALL documents unjudged in a fixed segment/topic.
-					# rel+not_rel==0 is likely to happen with high X and low t%,
-					# so we just stay cautious and avoid dividing by zero.
+					# rel+not_rel==0 is more likely to happen with high X and low t%:
+					# therefore, we just stay cautious and avoid dividing by zero.
 					if not (are_rel[t][seg] + arent_rel[t][seg]==0):
 						s += are_rel[t][seg]/(are_rel[t][seg]+arent_rel[t][seg])
 			else:
-				for t in training_topics[run_idx]:
+				for t in training_topics:
 					s += are_rel[t][seg]/(segment_sizes[seg])
 
 			# these "+1" are needed to let this dictionary make sense
@@ -270,7 +268,7 @@ def compute_probabilities(in_path, n_segments, n_training_topics, judged, n_topi
 # Note that this function will automatically keep track of the segments the documents are in.
 # in_path: our input folder
 # probabilities: data structure containing the probabilities {run: {segment: P(doc_in_this_segment | this_run)}}
-# training_topics: data structure containing which topics are used to perform the training process for each run {run: [topic1, ...]}
+# training_topics: data structure containing which topics are used to perform the training process, e.g. [topic371, ...]
 # n_segments: how many segments do we split our documents in?
 # topic_dim: how much large is a topic? (default: 1000)
 #
@@ -308,7 +306,7 @@ def score_evaluate(in_path, probabilities, training_topics, n_segments, topic_di
 				line = line.strip()
 				elements = line.split(' ')
 				topic = int(elements[0])
-				if not (topic in training_topics[run_idx]):
+				if not (topic in training_topics):
 					doc = elements[1]
 
 					# if we've never encountered this topic, we better initialize the dict

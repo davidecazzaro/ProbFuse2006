@@ -7,8 +7,9 @@ def main():
 	# options
 	show_map_comb = False
 	show_map_comb_trec5 = False
-	show_probfuse = True
+	show_probfuse = False
 	show_comb_max_minmax = False
+	show_11pt_rp_curve_probfuse = True
 
 	map_comb_base_input_folder = "input/ten_models"
 	map_comb_comb_input_folder = "output/ten_models/20171229_180835"
@@ -24,6 +25,18 @@ def main():
 	# plot side by side comb with max and minmax normalization
 	comb_max_folder = "output/ten_models_max/20171230_171440"
 	comb_minmax_folder = "output/ten_models/20171229_180835"
+
+	# plot 11pt rp curve
+	rp_curve_probfusejudged_files = [  "output/probfuse/ProbFuseJudged_25_0.5.res",
+								"output/probfuse_2/ProbFuseJudged_25_0.5.res",
+								"output/probfuse_3/ProbFuseJudged_25_0.5.res",
+								"output/probfuse_4/ProbFuseJudged_25_0.5.res",
+								"output/probfuse_5/ProbFuseJudged_25_0.5.res" ]
+	rp_curve_probfuseall_files = [  "output/probfuse/ProbFuseAll_25_0.5.res",
+								"output/probfuse_2/ProbFuseAll_25_0.5.res",
+								"output/probfuse_3/ProbFuseAll_25_0.5.res",
+								"output/probfuse_4/ProbFuseAll_25_0.5.res",
+								"output/probfuse_5/ProbFuseAll_25_0.5.res" ]
 
 	trec_eval_command = "./../materialeDelCorso/trec_eval.8.1/trec_eval"
 	qrels3_file = "./input/qrels.trec3.txt"
@@ -63,6 +76,11 @@ def main():
 
 	if show_comb_max_minmax:
 		plot_comb_max_min(comb_max_folder, comb_minmax_folder, trec_eval_command, qrels7_file)
+
+	if show_11pt_rp_curve_probfuse:
+		rp_curve_points_pfall = get_mean_eleven_point_curve_scores(rp_curve_probfuseall_files, trec_eval_command, qrels7_file)
+		rp_curve_points_pfjudged = get_mean_eleven_point_curve_scores(rp_curve_probfusejudged_files, trec_eval_command, qrels7_file)
+		plot_probfuse_eleven_points_rp_curve(rp_curve_points_pfall, rp_curve_points_pfjudged)
 
 if __name__ == '__main__':
    main()

@@ -11,6 +11,8 @@ import numpy 		as 		np
 from 	itertools	import 	*
 import shutil
 
+starting_topic_number = 351
+
 def clean_out_files(output_folder):
 	
 	# make sure tmp/topic_id.txt file are empty before appending, if they exist
@@ -28,7 +30,7 @@ def check_relevances_exist(path):
 		raise Exception("Expecting a folder "+path)
 	n_files = len(os.listdir(path))
 	if n_files != 10:
-		raise Exception("Expecting 10 files like 'rel1.txt' in the relevances folder, got "+str(n_files))
+		print("Expecting 10 files like 'rel1.txt' in the relevances folder, got "+str(n_files))
 
 
 
@@ -170,10 +172,10 @@ def compute_probabilities(in_path, n_segments, n_training_topics, judged, n_topi
 	# extracting all the input files from our input directory
 	file_list = [f for f in os.listdir(in_path)]
 	if len(file_list) != 10:
-		raise Exception("Expecting exactly 10 pre-processed files in "+in_path+"/, 1 per run. Got "+len(file_list)+".")
+		print("Expecting exactly 10 pre-processed files in "+in_path+"/, 1 per run. Got "+str(len(file_list))+".")
 
 	# sampling n_training_topics amount of topics from our dataset
-	possible_topics = range(351,400+1)
+	possible_topics = range(starting_topic_number,starting_topic_number+50)
 	# our training_topics is a vector of randomly chosen topics: [topicX, topicY, ..., topicZ]
 	training_topics = random.sample(possible_topics, n_training_topics)
 
@@ -297,7 +299,7 @@ def score_evaluate(in_path, probabilities, training_topics, n_segments, topic_di
 		# re-initialize the segment_idx every time we've done a run.
 		segment_idx=1
 		# we need to keep track of which topic we're extracting
-		current_topic=351
+		current_topic=starting_topic_number
 		# For every file (run), we now compute the score for each document
 		with open(file_path) as fp:
 			# since we use the training topics to train our algorithm, it makes no sense

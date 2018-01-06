@@ -138,6 +138,91 @@ def get_score_from_trec_eval_output(res_file, score_name="map"):
 
 	raise Exception("No score metric named", score_name, "found in file: ", res_file)
 
+# return a list of the eleven scores for the interpolated ir curve
+def get_eleven_point_score(res_file, trec_eval_command, qrels_file, return_dict=False):
+	command = [trec_eval_command, qrels_file, res_file ]
+	result = subprocess.run( command, stdout=subprocess.PIPE )
+	output = result.stdout.decode('utf-8') # get result from trec_eval command
+
+	metric_81 = "ircl_prn." # trec_eval 8.1 name
+	metric_9  = "iprec_at_recall_" # trec_eval 9 name
+
+	lines = output.strip().split("\n")
+	scores = {}
+	score_values = []
+	score_names = []
+	for line in lines:
+		tokens = line.split("\t")
+
+		if(len(tokens) != 3):
+			print("Line without three tokens: ", tokens)
+			print(output)
+			continue
+
+		score_metric_name = tokens[0].strip()
+		# tokens[1] is 'all' here
+		score_value = float(tokens[2].strip())
+
+		this_score_prefix = ""
+		if score_metric_name[:len(metric_81)] == metric_81:
+			this_score_prefix = metric_81
+		elif score_metric_name[:len(metric_9)] == metric_9:
+			this_score_prefix = metric_9
+		else:
+			continue
+
+		scores[ score_metric_name[len(this_score_prefix):] ] = score_value
+		score_names.append(score_metric_name[len(this_score_prefix):])
+		score_values.append(score_value)
+	
+	if len(scores) != 11:
+		print("Warn! We have", len(scores), "scores for the 11 point recall precision curve")
+
+	if return_dict:
+		return scores
+
+	return score_names, score_values
+
+# takes the files and mean their rp scores
+def get_mean_eleven_point_curve_scores(rp_curve_files, trec_eval_command, qrels_file):
+	
+	scores = {}
+	for res_file in rp_curve_files:
+		elevent_points_dict = get_eleven_point_score(res_file, trec_eval_command, qrels_file, return_dict=True)
+
+		for label in elevent_points_dict:
+			if not label in scores:
+				scores[label] = 0.0
+			scores[label] += elevent_points_dict[label]
+
+	for key in scores:
+		scores[key] = scores[key] / float(len(rp_curve_files))
+
+	return scores
+
+def plot_probfuse_eleven_points_rp_curve(dict_of_probfuseall_eleven_points, dict_of_probfusejudged_eleven_points):
+	
+	eleven_points_pfa = sorted(dict_of_probfuseall_eleven_points.items())
+	eleven_points_pfj = sorted(dict_of_probfusejudged_eleven_points.items())
+
+	x_a, y_a = zip(*eleven_points_pfa) # unpack a list of pairs into two tuples
+	x_j, y_j = zip(*eleven_points_pfj)
+
+	plt.gca().set_color_cycle(["blue", "dodgerblue"])
+
+	plt.grid(color='#eeeeee', linestyle='-', linewidth=1)
+
+	plt.plot(x_a, y_a, ".-")
+	plt.plot(x_j, y_j, "^--")
+	
+	plt.legend(["ProbFuseAll", "ProbFuseJudged"], loc='upper right')
+
+	plt.xlabel('Recall')
+	plt.ylabel('Precision')
+
+	plt.show()
+
+
 def autolabel(rects, ax, height_correction=0):
 	for rect in rects:
 		height = rect.get_height()
@@ -198,7 +283,7 @@ def plot_trec_map_comb(base_input_folder, comb_input_folder, trec_eval_command, 
 
 	#ax.set_xlabel('IR Models')
 	ax.set_ylabel('Mean Average Precision')
-	ax.set_title('MAP of first run and comb techniques on Trec-5 topics')
+	#ax.set_title('MAP of first run and comb techniques on Trec-5 topics')
 
 	autolabel(rects, ax)
 
@@ -273,7 +358,7 @@ def plot_map_comb(base_input_folder, comb_input_folder, trec_eval_command, qrels
 
 	ax.set_xlabel('IR Models')
 	ax.set_ylabel('Mean Average Precision')
-	ax.set_title('MAP of different models on Trec-7 topics')
+	#ax.set_title('MAP of different models on Trec-7 topics')
 
 	# plot the orizontal line
 	plt.axhline(y=threshold-0.00001, color="dodgerblue", linestyle="dashdot", linewidth=.4)
@@ -359,7 +444,7 @@ def plot_each_probfuse_map(scores, sort_by="name"):
 
 	ax.set_xlabel('Probfuse Models')
 	ax.set_ylabel('Mean Average Precision')
-	ax.set_title('MAP of different models on Trec-7 topics, varying x and t')
+	#ax.set_title('MAP of different models on Trec-7 topics, varying x and t')
 
 	ax.legend( (rect[1+1], rect[8+1]), ('ProbFuseAll', 'ProbFuseJudged') )
 	

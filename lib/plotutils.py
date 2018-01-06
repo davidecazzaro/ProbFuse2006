@@ -228,7 +228,7 @@ def autolabel(rects, ax, height_correction=0):
 		height = rect.get_height()
 		ax.text(rect.get_x() + rect.get_width()/2., 1.01*height-height_correction, ('%.3f' % height)[1:], ha='center', va='bottom')
 
-def plot_trec_map_comb(base_input_folder, comb_input_folder, trec_eval_command, qrels_file, show=True, save=True):
+def plot_trec_map_comb(base_input_folder, comb_input_folder, trec_eval_command, qrels_file, mean_pfa_score, mean_pfj_score, show=True, save=True):
 	# set colors for the bars
 	color_base = 'blue'
 	color_comb = 'purple'
@@ -260,7 +260,22 @@ def plot_trec_map_comb(base_input_folder, comb_input_folder, trec_eval_command, 
 			maps[key] = get_map_score(res, trec_eval_command, qrels_file)
 
 	colors.append("green")
-	maps["10% combMNZ \n ProbFuse target"] = 0.25144 # from paper
+	maps["50% combMNZ \n paper score"] = 0.25144 # from paper
+
+	# compare ProbFuseAll
+	colors.append("purple")
+	maps["ProbFuseAll \n 25 50%"] = mean_pfa_score
+	# from paper
+	colors.append("green")
+	maps["ProbFuseAll \n paper score"] = 0.27378
+
+	# compare ProbFuseJudged
+	colors.append("purple")
+	maps["ProbFuseJudged \n 25 50%"] = mean_pfj_score
+	# from paper
+	colors.append("green")
+	maps["ProbFuseJudged \n paper score"] = 0.26264
+
 
 	fig, ax = plt.subplots()
 	ax.grid(True, color="#dddddd", zorder=0,axis='y')
@@ -285,7 +300,7 @@ def plot_trec_map_comb(base_input_folder, comb_input_folder, trec_eval_command, 
 	ax.set_ylabel('Mean Average Precision')
 	#ax.set_title('MAP of first run and comb techniques on Trec-5 topics')
 
-	autolabel(rects, ax)
+	autolabel(rects, ax, height_correction=.002)
 
 	# rotate labels
 	#for tick in ax.get_xticklabels():
@@ -298,6 +313,13 @@ def plot_trec_map_comb(base_input_folder, comb_input_folder, trec_eval_command, 
 		fig.savefig("./output/plots/comb_maps.png")
 	if (show):
 		plt.show()
+
+
+def get_mean_map(input_files, trec_eval_command, qrels_file):
+	map_score = 0.0
+	for res_file in input_files:
+		map_score += get_map_score(res_file, trec_eval_command, qrels_file)
+	return map_score / float(len(input_files))
 
 
 def plot_map_comb(base_input_folder, comb_input_folder, trec_eval_command, qrels_file, show=True, save=True):
@@ -342,11 +364,19 @@ def plot_map_comb(base_input_folder, comb_input_folder, trec_eval_command, qrels
 	print("Threshold: ", threshold) 
 
 	# set colors for the bars
-	color_with_stoplist = 'blue'
-	color_no_stoplist = 'dodgerblue'
+	color_with_stoplist = 'darkgreen'
+	color_no_stoplist = 'forestgreen'
 	color_comb = 'purple'
-	colors = (color_with_stoplist, color_no_stoplist, color_with_stoplist, color_no_stoplist, color_with_stoplist, color_no_stoplist, color_with_stoplist, color_no_stoplist, color_with_stoplist, color_no_stoplist,
-	color_comb, color_comb, color_comb, color_comb, color_comb, color_comb)
+	colors = [color_with_stoplist, color_no_stoplist, color_with_stoplist, color_no_stoplist, color_with_stoplist, color_no_stoplist, color_with_stoplist, color_no_stoplist, color_with_stoplist, color_no_stoplist,
+	color_comb, color_comb, color_comb, color_comb, color_comb, color_comb]
+
+	# adding manually best scores for ProbFuse
+	colors.append("blue")
+	labels.append("ProbFuseAll\n500 40%")
+	values.append(0.2173)
+	colors.append("dodgerblue")
+	labels.append("ProbFuseJudged\n400 50%")
+	values.append(0.21549999999999997)
 
 	# set graph bound on y axis 
 	lower_bound = min(values)
@@ -446,7 +476,10 @@ def plot_each_probfuse_map(scores, sort_by="name"):
 	ax.set_ylabel('Mean Average Precision')
 	#ax.set_title('MAP of different models on Trec-7 topics, varying x and t')
 
-	ax.legend( (rect[1+1], rect[8+1]), ('ProbFuseAll', 'ProbFuseJudged') )
+	# set up legend
+	p_a = plt.Rectangle((0, 0), 1, 1, fc="blue")
+	p_j = plt.Rectangle((0, 0), 1, 1, fc="dodgerblue")
+	plt.legend([p_a, p_j], ["ProbFuseAll", "ProbFuseJudged"], loc='upper left')
 	
 	# rotate labels
 	for tick in ax.get_xticklabels():
@@ -510,9 +543,9 @@ def plot_comb_max_min(comb_max_folder, comb_minmax_folder, trec_eval_command, qr
 
 	ax.set_xticks(ind+bar_width/2-z/2)
 
-	ax.set_xlabel('Comb fusions')
+	#ax.set_xlabel('Comb fusions')
 	ax.set_ylabel('Mean Average Precision')
-	ax.set_title('Comparing MAP of comb techniques with different normalizations')
+	#ax.set_title('Comparing MAP of comb techniques with different normalizations')
 	
 	# rotate labels
 	for tick in ax.get_xticklabels():

@@ -17,10 +17,22 @@ def main():
 	# show_map_comb_trec5
 	trec5_map_comb_base_input_folder = "input/trec5"
 	trec5_map_comb_comb_input_folder = "output/trec5/20171229_115824"
+	trec5_map_probfuseall_input_files = ["output/probfuse_trec51_1/ProbFuseAll_25_0.5.res",
+										 "output/probfuse_trec51_2/ProbFuseAll_25_0.5.res",
+										 "output/probfuse_trec51_3/ProbFuseAll_25_0.5.res",
+										 "output/probfuse_trec51_4/ProbFuseAll_25_0.5.res",
+										 "output/probfuse_trec51_5/ProbFuseAll_25_0.5.res" ]
+	trec5_map_probfusejudged_input_files = ["output/probfuse_trec51_1/ProbFuseJudged_25_0.5.res",
+										 "output/probfuse_trec51_2/ProbFuseJudged_25_0.5.res",
+										 "output/probfuse_trec51_3/ProbFuseJudged_25_0.5.res",
+										 "output/probfuse_trec51_4/ProbFuseJudged_25_0.5.res",
+										 "output/probfuse_trec51_5/ProbFuseJudged_25_0.5.res" ]
+
+
 
 	# change these as needed, used to plot probfuse
 	probfuse_res_folders = ["output/probfuse/","output/probfuse_2/","output/probfuse_3/","output/probfuse_4/","output/probfuse_5/"]
-	probfuse_plot_sort_by = "x" # you can sort by ["name", "x", "t", "score", "adjacent"] (x is number of segments)
+	probfuse_plot_sort_by = "score" # you can sort by ["name", "x", "t", "score", "adjacent"] (x is number of segments)
 
 	# plot side by side comb with max and minmax normalization
 	comb_max_folder = "output/ten_models_max/20171230_171440"
@@ -44,8 +56,14 @@ def main():
 	qrels7_file = "./input/qrels.trec7.txt"
 
 	if show_map_comb_trec5:
-		# plotting map_comb
-		plot_trec_map_comb(trec5_map_comb_base_input_folder, trec5_map_comb_comb_input_folder, trec_eval_command, qrels5_file, show=True, save=False)
+		trec5_mean_pfa = get_mean_map(trec5_map_probfuseall_input_files, trec_eval_command, qrels5_file)
+		trec5_mean_pfj = get_mean_map(trec5_map_probfusejudged_input_files, trec_eval_command, qrels5_file)
+
+		print(trec5_mean_pfa, trec5_mean_pfj)
+
+		plot_trec_map_comb(trec5_map_comb_base_input_folder, trec5_map_comb_comb_input_folder, trec_eval_command, qrels5_file,
+							trec5_mean_pfa, trec5_mean_pfj,
+							show=True, save=False)
 
 	if show_map_comb:
 		# plotting map_comb

@@ -11,8 +11,6 @@ import numpy 		as 		np
 from 	itertools	import 	*
 import shutil
 
-starting_topic_number = 351
-
 def clean_out_files(output_folder):
 	
 	# make sure tmp/topic_id.txt file are empty before appending, if they exist
@@ -30,7 +28,7 @@ def check_relevances_exist(path):
 		raise Exception("Expecting a folder "+path)
 	n_files = len(os.listdir(path))
 	if n_files != 10:
-		print("Expecting 10 files like 'rel1.txt' in the relevances folder, got "+str(n_files))
+		raise Exception("Expecting 10 files like 'rel1.txt' in the relevances folder, got "+str(n_files))
 
 
 
@@ -162,8 +160,7 @@ def compute_segment_sizes(n_segments, topic_dim):
 #
 # RETURNS: a "probability" dict; shape: {run: {s: p}},
 # where p is the probability that a document in segment is relevant (within run)
-# RETURNS: a vector containing the training topics, chosen randomly, so that we can remember which one were chosen
-def compute_probabilities(in_path, n_segments, n_training_topics, judged, n_topics, topic_dim):
+def compute_probabilities(in_path, n_segments, training_topics, judged, n_topics, topic_dim):
 
 	# probability dictionary; shape: {run: {segment: p}},
 	# where p is the probability that a document in the segment is relevant (within the run)
@@ -172,12 +169,8 @@ def compute_probabilities(in_path, n_segments, n_training_topics, judged, n_topi
 	# extracting all the input files from our input directory
 	file_list = [f for f in os.listdir(in_path)]
 	if len(file_list) != 10:
-		print("Expecting exactly 10 pre-processed files in "+in_path+"/, 1 per run. Got "+str(len(file_list))+".")
+		raise Exception("Expecting exactly 10 pre-processed files in "+in_path+"/, 1 per run. Got "+len(file_list)+".")
 
-	# sampling n_training_topics amount of topics from our dataset
-	possible_topics = range(starting_topic_number,starting_topic_number+50)
-	# our training_topics is a vector of randomly chosen topics: [topicX, topicY, ..., topicZ]
-	training_topics = random.sample(possible_topics, n_training_topics)
 
 	# As a reminder, we know that sizes are the same for each run and for each topic
 	# (we always get 1000/n_segments), so we need to do this computation just once.
@@ -261,9 +254,9 @@ def compute_probabilities(in_path, n_segments, n_training_topics, judged, n_topi
 			# these "+1" are needed to let this dictionary make sense
 			# e.g. "{run1: {seg1: 0.123, seg2: 0.321, ...}, ...}"
 			# something like {run0: {seg0: ...}, ...} would be less readable in our opinion
-			probability_dict[run_idx][seg+1] = s/n_training_topics
+			probability_dict[run_idx][seg+1] = s/len(training_topics)
 
-	return probability_dict, training_topics
+	return probability_dict
 
 # Given the input files (the documents) and the pre-evaluated probabilities, this function will compute the  
 # the scores of all the documents retrieved by the 10 IR models.
@@ -299,7 +292,7 @@ def score_evaluate(in_path, probabilities, training_topics, n_segments, topic_di
 		# re-initialize the segment_idx every time we've done a run.
 		segment_idx=1
 		# we need to keep track of which topic we're extracting
-		current_topic=starting_topic_number
+		current_topic=351
 		# For every file (run), we now compute the score for each document
 		with open(file_path) as fp:
 			# since we use the training topics to train our algorithm, it makes no sense
@@ -361,14 +354,19 @@ def prob_fuse(in_path, out_path, n_segments, training_perc, judged=True, n_topic
 
 	
 	# picking training_perc*n_topics training queries (topics), to train our ProbFuse algorithm.
-	n_tr_to = int(n_topics*training_perc)
+	n_training_topics = int(n_topics*training_perc)
+	# sampling n_training_topics amount of topics from our dataset, from 351 to 400
+	possible_topics = range(351,400+1)
+	# our training_topics is a vector of randomly chosen topics: [topicX, topicY, ..., topicZ]
+	training_topics = random.sample(possible_topics, n_training_topics)
+
 	# reminder; pr has the following shape: {run: {segment: probability_a_doc_is_in_segment}}
-	pr, tr_to = compute_probabilities(in_path, n_segments, n_tr_to, judged, n_topics, topic_dim)
+	pr = compute_probabilities(in_path, n_segments, training_topics, judged, n_topics, topic_dim)
 	
 	# With these probabilities is now possible to evaluate our scores
 	# scores will have the following shape:
 	# {topic: {doc: score}}
-	sc = score_evaluate(in_path, pr, tr_to, n_segments, topic_dim)
+	sc = score_evaluate(in_path, pr, training_topics, n_segments, topic_dim)
 
 	# and print them out.
 	# Printing means saving the output file at out_path with the following format:
